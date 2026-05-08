@@ -1,0 +1,7 @@
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.7
+google-genai>=1.0
+groq>=0.11
+cerebras-cloud-sdk>=1.5
+python-dotenv>=1.0
