@@ -2,7 +2,7 @@
 
 *Generated 2026-05-05.*
 
-The MOOC.fi 2026 course is the **spine** of Jon's learning. These resources layer in problems, examples, and angles for his two career destinations — **cybersecurity** and **AI agents**. The tutor pulls from them once Jon has the prerequisite Python from the MOOC. Each entry notes when it becomes in-scope.
+The MOOC.fi 2026 course is the **spine** of the user's learning. These resources layer in problems, examples, and angles for his two career destinations — **cybersecurity** and **AI agents**. The tutor pulls from them once the user has the prerequisite Python from the MOOC. Each entry notes when it becomes in-scope.
 
 ## Cybersecurity track
 
@@ -18,14 +18,14 @@ The MOOC.fi 2026 course is the **spine** of Jon's learning. These resources laye
 - **TryHackMe — Python for Cybersecurity path** — https://tryhackme.com/ . Some content paid; free rooms still solid.
 
 **Part 8+ (OOP, intermediate):**
-- **Black Hat Python (2nd ed)** — Justin Seitz / Tim Arnold. Classic. Sockets, packet manipulation, simple offensive tooling. Defer until Jon is comfortable with classes.
+- **Black Hat Python (2nd ed)** — Justin Seitz / Tim Arnold. Classic. Sockets, packet manipulation, simple offensive tooling. Defer until the user is comfortable with classes.
 
 ## AI-agent track
 
 **Now (Parts 1–3) — flavor only.** Security/sysadmin analogies for now; AI agent code requires functions and dicts (Part 5+).
 
 **Part 5+ (functions, dicts):**
-- **Anthropic Claude API docs** — https://docs.anthropic.com . Most relevant given Jon already uses Claude Code. Start with Quickstart + Messages API.
+- **Anthropic Claude API docs** — https://docs.anthropic.com . Most relevant given the user already uses Claude Code. Start with Quickstart + Messages API.
 - **Anthropic "Building Effective Agents" guide** — https://www.anthropic.com/research/building-effective-agents . Code-light essay on agent design patterns.
 
 **Part 7+ (files, exceptions):**
@@ -45,8 +45,8 @@ The MOOC.fi 2026 course is the **spine** of Jon's learning. These resources laye
 ## Updating this file
 
 Add a resource when:
-- Jon mentions interest in a specific subarea (reverse engineering, prompt engineering, etc.)
+- the user mentions interest in a specific subarea (reverse engineering, prompt engineering, etc.)
 - A new MOOC concept opens a door to a useful supplementary text
-- A previously-deferred resource becomes accessible (Jon hits the prerequisite Part)
+- A previously-deferred resource becomes accessible (the user hits the prerequisite Part)
 
 Remove resources that prove too advanced, low-quality, or outdated.

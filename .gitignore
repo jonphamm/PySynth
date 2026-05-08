@@ -9,6 +9,10 @@ __pycache__/
 .venv/
 venv/
 
+# Frontend (Next.js PySynth app lives at C:\dev\pysynth; this folder
+# only ever contains stray node_modules from a failed Drive npm install)
+pysynth/
+
 # IDE
 .vscode/
 .idea/
@@ -20,6 +24,7 @@ Thumbs.db
 
 # Personal data (user-specific state — re-created on first run)
 Output/progress.md
+Output/progress-pysynth.md
 Output/exercises/
 Resources/python-learning-plan.md
 Resources/personal-context.md

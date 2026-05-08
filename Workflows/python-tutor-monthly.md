@@ -1,6 +1,6 @@
 # Workflow: Python Tutor — Monthly Review
 
-**When to run:** Last weekday of each month (manual or scheduled). Jon says "monthly python review" or this is invoked by the monthly routine.
+**When to run:** Last weekday of each month (manual or scheduled). the user says "monthly python review" or this is invoked by the monthly routine.
 
 **Goal:** Deeper synthesis than the weekly. Test retention from earlier in the month, propose a month-end mini-project tying recent concepts to your day-job work, and update the learning plan with next month's targets.
 
@@ -29,12 +29,12 @@ Pick **3 random concepts** from the **first half of the month** (the ones longes
 - 1 "what does this print?"
 - 1 short answer
 
-Present all three at once. Grade. If Jon misses 2/3, schedule a review week before continuing forward in the MOOC.
+Present all three at once. Grade. If the user misses 2/3, schedule a review week before continuing forward in the MOOC.
 
 ### 4. Propose the month-end project
 
 Suggest **one** mini-project that:
-- Combines **2–3 concepts** Jon learned this month
+- Combines **2–3 concepts** the user learned this month
 - Has a clear application to your **sysadmin / day-job work** (e.g. email marketing, IT ops)
 - Is doable in 2–4 hours total
 - Has a defined "done" condition (an output file, a working script, etc.)
@@ -52,10 +52,10 @@ Save the project spec to `Output/exercises/project-YYYY-MM.md` (note: `.md`, not
 ### 5. Update the learning plan for next month
 
 In `Resources/python-learning-plan.md`:
-- Update Jon's current MOOC position
+- Update the user's current MOOC position
 - Set **next month's milestone** (typically: next 4 Parts + one project)
 - If retention check showed weakness, build review days into the first week
-- Note any career-relevant detours (e.g., "Jon expressed interest in subprocess management — slot a side-quest mid-month")
+- Note any career-relevant detours (e.g., "the user expressed interest in subprocess management — slot a side-quest mid-month")
 
 ### 6. Append monthly summary to progress.md
 
@@ -79,13 +79,13 @@ Below the most recent weekly summary, add:
 
 ### 7. Sign-off
 
-Acknowledge the month. Be honest but encouraging. If Jon completed the project, celebrate it briefly. If he didn't get to it yet, carry it forward to next month with a smaller scope if needed.
+Acknowledge the month. Be honest but encouraging. If the user completed the project, celebrate it briefly. If he didn't get to it yet, carry it forward to next month with a smaller scope if needed.
 
 ---
 
 ## Anti-patterns
 
-- Don't propose a project that needs frameworks/libraries Jon hasn't seen yet (Flask, pandas, requests) unless the MOOC has covered them.
-- Don't make the retention check punitive — its job is to spot real gaps, not to grade Jon.
+- Don't propose a project that needs frameworks/libraries the user hasn't seen yet (Flask, pandas, requests) unless the MOOC has covered them.
+- Don't make the retention check punitive — its job is to spot real gaps, not to grade the user.
 - Don't pile up incomplete projects month-over-month. If a project rolls over twice, scope it down or replace it.
 - Don't change the monthly milestone structure if it's working — consistency is what makes long-term tracking valuable.
