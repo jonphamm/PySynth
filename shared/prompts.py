@@ -94,6 +94,7 @@ def start_user_message(
         "- Option strings should be the answer text only (e.g. \"//\" or \"7\"), NOT prefixed with a/b/c/d.\n"
         "- correct_index is a 0-based integer.\n"
         "- All code values (worked_example_code and each syntax_forms.code) are raw code bodies — do NOT wrap them in ``` fences.\n"
+        "- Code values MUST use raw ASCII Python operators ONLY: `>=` not `≥`, `<=` not `≤`, `!=` not `≠`, `*` not `×`, `/` not `÷`, `-` not `−` (or any other dash). Python's parser rejects Unicode math symbols — students will copy these examples and hit SyntaxError. This applies to worked_example_code, every syntax_forms.code, and any code embedded in quiz questions.\n"
         "- Do NOT include the coding exercise or apply-at-work in this response — those come later.\n"
         "\n"
         "Inline-markdown formatting — REQUIRED, the UI depends on this for visual hierarchy:\n"

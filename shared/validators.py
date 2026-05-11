@@ -1,5 +1,26 @@
 """LLM-output coercion: turn loose JSON into the strict shapes the UI consumes."""
 
+# LLMs sometimes "pretty-print" code with Unicode math symbols, which Python's
+# parser rejects. Normalize any code field that reaches the UI so students who
+# copy examples don't hit SyntaxError.
+_CODE_OPERATOR_NORMALIZATION = {
+    "≥": ">=",
+    "≤": "<=",
+    "≠": "!=",
+    "×": "*",
+    "÷": "/",
+    "−": "-",
+    "–": "-",
+    "—": "-",
+}
+
+
+def _normalize_code(s) -> str:
+    text = str(s) if s is not None else ""
+    for src, dst in _CODE_OPERATOR_NORMALIZATION.items():
+        text = text.replace(src, dst)
+    return text
+
 
 def _str_list(value):
     if not isinstance(value, list):
@@ -33,7 +54,7 @@ def validate_session_data(d: dict) -> dict:
             else:
                 cleaned["correct_index"] = None
             if q.get("code"):
-                cleaned["code"] = str(q["code"])
+                cleaned["code"] = _normalize_code(q["code"])
             if not cleaned["options"]:
                 cleaned = {"type": "free", "subtype": cleaned["subtype"], "text": cleaned["text"]}
         valid_qs.append(cleaned)
@@ -44,7 +65,7 @@ def validate_session_data(d: dict) -> dict:
             continue
         syntax_forms.append({
             "label": str(sf.get("label", "")),
-            "code": str(sf.get("code", "")),
+            "code": _normalize_code(sf.get("code", "")),
         })
 
     return {
@@ -56,7 +77,7 @@ def validate_session_data(d: dict) -> dict:
             "definition": review.get("definition", ""),
             "how_it_works": _str_list(review.get("how_it_works")),
             "syntax_forms": syntax_forms,
-            "worked_example_code": review.get("worked_example_code", ""),
+            "worked_example_code": _normalize_code(review.get("worked_example_code", "")),
             "worked_example_walkthrough": _str_list(review.get("worked_example_walkthrough")),
             "common_patterns": _str_list(review.get("common_patterns")),
             "analogy": review.get("analogy", ""),
