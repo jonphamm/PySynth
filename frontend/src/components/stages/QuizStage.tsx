@@ -108,7 +108,7 @@ export function QuizStage({ wizard }: Props) {
           style={{
             background: "linear-gradient(135deg, #00f5ff 0%, #7000ff 100%)",
             color: "#020203",
-            boxShadow: "0 6px 24px rgba(0,245,255,0.35)",
+            boxShadow: "0 3px 12px rgba(0,245,255,0.25)",
           }}
         >
           Submit answers →

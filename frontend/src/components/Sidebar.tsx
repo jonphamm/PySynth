@@ -66,7 +66,7 @@ export function Sidebar({
         />
       )}
       <aside
-        className={`glass relative z-50 flex h-full w-[260px] flex-col p-5 transition-transform duration-300 ease-out max-md:fixed max-md:inset-y-2 max-md:left-2 max-md:h-[calc(100%-1rem)] ${
+        className={`glass relative flex h-full min-h-0 w-[260px] flex-col overflow-hidden p-5 transition-transform duration-300 ease-out max-md:fixed max-md:inset-y-2 max-md:left-2 max-md:z-50 max-md:h-[calc(100%-1rem)] ${
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-[120%]"
         } md:translate-x-0`}
       >
