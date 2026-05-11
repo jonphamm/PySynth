@@ -10,9 +10,10 @@ import type { Wizard } from "@/hooks/useWizard";
 
 type StagePanelProps = {
   wizard: Wizard;
+  onSessionLogged?: () => void;
 };
 
-export function StagePanel({ wizard }: StagePanelProps) {
+export function StagePanel({ wizard, onSessionLogged }: StagePanelProps) {
   const { stage } = wizard;
 
   return (
@@ -31,7 +32,9 @@ export function StagePanel({ wizard }: StagePanelProps) {
             {stage === "quiz" && <QuizStage wizard={wizard} />}
             {stage === "editor" && <EditorStage wizard={wizard} />}
             {stage === "grade" && <GradeStage wizard={wizard} />}
-            {stage === "done" && <DoneStage wizard={wizard} />}
+            {stage === "done" && (
+              <DoneStage wizard={wizard} onSessionLogged={onSessionLogged} />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

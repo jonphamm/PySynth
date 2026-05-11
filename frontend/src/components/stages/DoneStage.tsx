@@ -6,9 +6,10 @@ import { logSession } from "@/lib/api";
 
 type Props = {
   wizard: Wizard;
+  onSessionLogged?: () => void;
 };
 
-export function DoneStage({ wizard }: Props) {
+export function DoneStage({ wizard, onSessionLogged }: Props) {
   const {
     sessionData,
     exerciseResult,
@@ -50,13 +51,16 @@ export function DoneStage({ wizard }: Props) {
       exercise_text: exerciseResult.exercise_text || "",
       type: "Daily",
     })
-      .then(() => setLogState("ok"))
+      .then(() => {
+        setLogState("ok");
+        onSessionLogged?.();
+      })
       .catch((err: Error) => {
         loggedRef.current = false;
         setLogState("error");
         setLogError(err.message);
       });
-  }, [sessionData, exerciseResult, gradeResult, reviewResult, code, feeling]);
+  }, [sessionData, exerciseResult, gradeResult, reviewResult, code, feeling, onSessionLogged]);
 
   return (
     <div className="flex h-full min-h-0 flex-col items-center justify-center px-10 py-10 text-center">

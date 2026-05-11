@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { listDoneChapters } from "@/lib/api";
 import { parseChapter } from "@/lib/topic";
 import { wizardOrder } from "@/lib/tokens";
 import type { DoneChapter, WizardStage } from "@/types/session";
@@ -24,6 +22,7 @@ type SidebarProps = {
   conceptLabel: string;
   currentChapter: string;
   onSwitchChapter: (chapter: string) => void;
+  doneChapters: DoneChapter[];
 };
 
 export function Sidebar({
@@ -33,17 +32,9 @@ export function Sidebar({
   conceptLabel,
   currentChapter,
   onSwitchChapter,
+  doneChapters,
 }: SidebarProps) {
   const currentIdx = wizardOrder.indexOf(current);
-  const [doneChapters, setDoneChapters] = useState<DoneChapter[]>([]);
-
-  useEffect(() => {
-    listDoneChapters()
-      .then((res) => setDoneChapters(res.chapters))
-      .catch(() => {
-        /* sidebar list is non-critical — fail silently */
-      });
-  }, []);
 
   const visibleChapters = doneChapters.filter(
     (c) => c.chapter !== currentChapter,

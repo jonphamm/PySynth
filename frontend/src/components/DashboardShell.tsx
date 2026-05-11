@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listDoneChapters } from "@/lib/api";
 import { useWizard } from "@/hooks/useWizard";
 import { wizardOrder } from "@/lib/tokens";
 import { parseChapter } from "@/lib/topic";
+import type { DoneChapter } from "@/types/session";
 import { Sidebar } from "./Sidebar";
 import { HeaderBar } from "./HeaderBar";
 import { FooterStatus } from "./FooterStatus";
@@ -27,7 +29,20 @@ export function DashboardShell() {
   } = wizard;
   const startedRef = useRef(false);
   const [pendingSwitch, setPendingSwitch] = useState<string | null>(null);
+  const [doneChapters, setDoneChapters] = useState<DoneChapter[]>([]);
   const progress = (index + 1) / wizardOrder.length;
+
+  const refreshDoneChapters = useCallback(() => {
+    listDoneChapters()
+      .then((res) => setDoneChapters(res.chapters))
+      .catch(() => {
+        /* sidebar list is non-critical — fail silently */
+      });
+  }, []);
+
+  useEffect(() => {
+    refreshDoneChapters();
+  }, [refreshDoneChapters]);
 
   const handleSwitchChapter = useCallback(
     (chapter: string) => {
@@ -97,8 +112,9 @@ export function DashboardShell() {
             conceptLabel={sidebarConcept}
             currentChapter={sessionData?.topic.chapter ?? ""}
             onSwitchChapter={handleSwitchChapter}
+            doneChapters={doneChapters}
           />
-          <StagePanel wizard={wizard} />
+          <StagePanel wizard={wizard} onSessionLogged={refreshDoneChapters} />
           <MentorPanel />
         </div>
 
