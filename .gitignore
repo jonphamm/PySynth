@@ -14,7 +14,13 @@ venv/
 # IDE
 .vscode/
 .idea/
-.claude/
+
+# Claude Code: ignore local state, ship shared skills/agents
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+!.claude/agents/
+!.claude/agents/**
 
 # OS
 .DS_Store
