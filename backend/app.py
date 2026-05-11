@@ -16,7 +16,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from shared.llm import call_llm_json
+from shared.llm import call_llm, call_llm_json
 from shared.progress import (
     append_progress_row,
     append_solution,
@@ -26,6 +26,7 @@ from shared.progress import (
     write_exercise_file,
 )
 from shared.prompts import (
+    ask_user_message,
     build_system_prompt,
     exercise_user_message,
     grade_user_message,
@@ -90,6 +91,24 @@ class ReviewResponse(BaseModel):
     review_markdown: str
     verdict: str
     reference_solution: str = ""
+
+
+class ChatTurn(BaseModel):
+    role: Literal["user", "mentor"]
+    text: str
+
+
+class AskRequest(BaseModel):
+    question: str
+    chapter: str = ""
+    concept: str = ""
+    stage: str = "concept"
+    history: list[ChatTurn] = Field(default_factory=list)
+
+
+class AskResponse(BaseModel):
+    answer: str
+    provider: str
 
 
 class LogRequest(BaseModel):
@@ -241,6 +260,24 @@ def session_review(req: ReviewRequest) -> ReviewResponse:
     return ReviewResponse(
         review_markdown=md, verdict=verdict, reference_solution=str(reference)
     )
+
+
+@app.post("/session/ask", response_model=AskResponse)
+def session_ask(req: AskRequest) -> AskResponse:
+    if not req.question.strip():
+        raise _fail("question is empty", status=400)
+    user_msg = ask_user_message(
+        question=req.question,
+        chapter=req.chapter,
+        concept=req.concept,
+        stage=req.stage,
+        history=[t.model_dump() for t in req.history[-10:]],
+    )
+    try:
+        text, provider = call_llm(build_system_prompt(), user_msg)
+    except Exception as exc:
+        raise _fail(f"LLM call failed: {exc}") from exc
+    return AskResponse(answer=text.strip(), provider=provider)
 
 
 @app.post("/session/log", response_model=LogResponse)

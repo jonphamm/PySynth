@@ -1,4 +1,6 @@
 import type {
+  AskPayload,
+  AskResult,
   DoneChaptersResponse,
   ExerciseResult,
   GradeResult,
@@ -118,6 +120,10 @@ export type LogPayload = {
 
 export function logSession(payload: LogPayload): Promise<LogResult> {
   return post<LogResult>("/session/log", payload);
+}
+
+export function askMentor(payload: AskPayload): Promise<AskResult> {
+  return post<AskResult>("/session/ask", payload);
 }
 
 export { ApiError };

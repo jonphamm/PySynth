@@ -212,6 +212,55 @@ def exercise_user_message(angle: str) -> str:
     )
 
 
+def ask_user_message(
+    *,
+    question: str,
+    chapter: str,
+    concept: str,
+    stage: str,
+    history: list[dict],
+) -> str:
+    """Prompt for the free-form mentor chat alongside the session.
+
+    `history` is a list of `{"role": "user"|"mentor", "text": "..."}` dicts.
+    Caller should pass only the recent turns (last 5 pairs is plenty); we
+    interleave them as User: / Mentor: lines so the LLM has context for the
+    current question.
+    """
+    turns: list[str] = []
+    for msg in history[-10:]:
+        role = msg.get("role")
+        text = (msg.get("text") or "").strip()
+        if not text:
+            continue
+        speaker = "User" if role == "user" else "Mentor"
+        turns.append(f"{speaker}: {text}")
+    convo = "\n\n".join(turns)
+    if convo:
+        convo = f"Conversation so far:\n\n{convo}\n\n"
+
+    return (
+        "TUTOR-CHAT MODE\n"
+        "The student is in a free-form chat alongside their daily session, not a graded\n"
+        "stage. Answer the most recent question briefly and helpfully.\n\n"
+        "CURRENT SESSION CONTEXT\n"
+        f'- Chapter: "{chapter or "unknown"}"\n'
+        f'- Concept: "{concept or "unknown"}"\n'
+        f'- Stage: {stage} (concept | quiz | editor | grade | done)\n\n'
+        "RULES\n"
+        "- Short answer: 3-6 sentences max unless the user explicitly asks 'explain more'.\n"
+        "- Markdown is fine. Inline code in backticks. Fenced ```python blocks for multi-line code.\n"
+        "- ASCII operators only (`>=`, `<=`, `!=`, `*`, `/`). No Unicode math symbols.\n"
+        "- DO NOT reveal the answer to the current quiz question or solve the current coding exercise. Hint, don't solve.\n"
+        "- Off-topic questions (not about Python or this concept): one-line redirect back to the topic.\n"
+        "- If the user asks 'how would I use this at work?', vary the angle across sysadmin / cybersecurity / AI agents.\n\n"
+        "---\n\n"
+        f"{convo}"
+        f"User: {question.strip()}\n\n"
+        "Mentor:"
+    )
+
+
 def review_user_message(exercise_text: str, code: str) -> str:
     """Prompt that reviews the user's submitted code. Returns a JSON-wrapped
     response `{"review_markdown": "...", "verdict": "pass"|"close"|"miss",

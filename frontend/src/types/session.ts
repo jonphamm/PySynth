@@ -117,3 +117,22 @@ export type Status =
   | { kind: "idle" }
   | { kind: "loading"; what: string }
   | { kind: "error"; message: string };
+
+/** Free-form mentor-chat conversation turn. */
+export type ChatRole = "user" | "mentor";
+export type ChatMessage = { role: ChatRole; text: string };
+
+/** Payload for POST /session/ask. */
+export type AskPayload = {
+  question: string;
+  chapter: string;
+  concept: string;
+  stage: WizardStage;
+  history: ChatMessage[];
+};
+
+/** Returned by POST /session/ask. */
+export type AskResult = {
+  answer: string;
+  provider: string;
+};

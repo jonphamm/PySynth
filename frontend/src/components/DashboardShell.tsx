@@ -119,7 +119,11 @@ export function DashboardShell() {
             onMobileClose={() => setMobileMenuOpen(false)}
           />
           <StagePanel wizard={wizard} onSessionLogged={refreshDoneChapters} />
-          <MentorPanel />
+          <MentorPanel
+            chapter={sessionData?.topic.chapter ?? ""}
+            concept={sessionData?.topic.concept ?? ""}
+            stage={stage}
+          />
         </div>
 
         {/* Footer */}
