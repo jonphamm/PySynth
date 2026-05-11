@@ -1,11 +1,13 @@
-"""Multi-provider LLM client. Gemini → Groq → Cerebras chain. JSON + text modes."""
+"""Multi-provider LLM client. Gemini → Groq → Cerebras → OpenRouter chain. JSON + text modes."""
 
 import json
 import os
 import sys
 import time
 
-from .config import CEREBRAS_MODEL, GEMINI_MODEL, GROQ_MODEL
+from .config import CEREBRAS_MODEL, GEMINI_MODEL, GROQ_MODEL, OPENROUTER_MODEL
+
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Error-message hints that indicate a transient (server-side or short-window)
 # failure worth retrying on the SAME provider before falling through to the
@@ -57,6 +59,11 @@ def _import_cerebras():
     return Cerebras
 
 
+def _import_openai():
+    from openai import OpenAI
+    return OpenAI
+
+
 def call_gemini(system_prompt: str, user_message: str) -> str:
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -92,6 +99,22 @@ def call_cerebras(system_prompt: str, user_message: str) -> str:
     client = Cerebras(api_key=api_key)
     response = client.chat.completions.create(
         model=CEREBRAS_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+    )
+    return response.choices[0].message.content
+
+
+def call_openrouter(system_prompt: str, user_message: str) -> str:
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY not set")
+    OpenAI = _import_openai()
+    client = OpenAI(api_key=api_key, base_url=OPENROUTER_BASE_URL)
+    response = client.chat.completions.create(
+        model=OPENROUTER_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
@@ -149,16 +172,35 @@ def call_cerebras_json(system_prompt: str, user_message: str) -> dict:
     return json.loads(response.choices[0].message.content)
 
 
+def call_openrouter_json(system_prompt: str, user_message: str) -> dict:
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY not set")
+    OpenAI = _import_openai()
+    client = OpenAI(api_key=api_key, base_url=OPENROUTER_BASE_URL)
+    response = client.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        response_format={"type": "json_object"},
+    )
+    return json.loads(response.choices[0].message.content)
+
+
 PROVIDERS_TEXT = [
     ("Gemini", call_gemini),
     ("Groq", call_groq),
     ("Cerebras", call_cerebras),
+    ("OpenRouter", call_openrouter),
 ]
 
 PROVIDERS_JSON = [
     ("Gemini", call_gemini_json),
     ("Groq", call_groq_json),
     ("Cerebras", call_cerebras_json),
+    ("OpenRouter", call_openrouter_json),
 ]
 
 

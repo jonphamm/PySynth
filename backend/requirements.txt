@@ -4,4 +4,5 @@ pydantic>=2.7
 google-genai>=1.0
 groq>=0.11
 cerebras-cloud-sdk>=1.5
+openai>=1.40
 python-dotenv>=1.0
