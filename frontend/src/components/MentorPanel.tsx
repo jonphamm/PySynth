@@ -2,7 +2,7 @@ import { AIOrb } from "./ui/AIOrb";
 
 export function MentorPanel() {
   return (
-    <aside className="glass flex h-full w-[340px] flex-col p-5">
+    <aside className="glass hidden h-full w-[340px] flex-col p-5 lg:flex">
       <div className="mb-5 flex items-center gap-3">
         <AIOrb state="idle" size={42} />
         <div>

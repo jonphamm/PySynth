@@ -14,7 +14,7 @@ export function StageStatus({ label, status, loadingMessage, onRetry }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b px-7 py-5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <header className="border-b px-4 py-4 sm:px-7 sm:py-5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div
           className="font-mono text-[10px] uppercase tracking-[0.4em]"
           style={{ color: "#00f5ff" }}

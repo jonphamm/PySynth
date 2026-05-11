@@ -23,6 +23,8 @@ type SidebarProps = {
   currentChapter: string;
   onSwitchChapter: (chapter: string) => void;
   doneChapters: DoneChapter[];
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 };
 
 export function Sidebar({
@@ -33,6 +35,8 @@ export function Sidebar({
   currentChapter,
   onSwitchChapter,
   doneChapters,
+  mobileOpen,
+  onMobileClose,
 }: SidebarProps) {
   const currentIdx = wizardOrder.indexOf(current);
 
@@ -40,8 +44,32 @@ export function Sidebar({
     (c) => c.chapter !== currentChapter,
   );
 
+  const handleJump = onJump
+    ? (s: WizardStage) => {
+        onJump(s);
+        onMobileClose();
+      }
+    : undefined;
+
+  const handleSwitch = (chapter: string) => {
+    onSwitchChapter(chapter);
+    onMobileClose();
+  };
+
   return (
-    <aside className="glass relative flex h-full w-[260px] flex-col p-5">
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={onMobileClose}
+          aria-hidden
+        />
+      )}
+      <aside
+        className={`glass relative z-50 flex h-full w-[260px] flex-col p-5 transition-transform duration-300 ease-out max-md:fixed max-md:inset-y-2 max-md:left-2 max-md:h-[calc(100%-1rem)] ${
+          mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-[120%]"
+        } md:translate-x-0`}
+      >
       <div className="mb-6">
         <div
           className="font-mono text-[10px] uppercase tracking-[0.4em]"
@@ -85,10 +113,10 @@ export function Sidebar({
               <li key={stage}>
                 <button
                   type="button"
-                  onClick={onJump ? () => onJump(stage) : undefined}
-                  disabled={!onJump}
+                  onClick={handleJump ? () => handleJump(stage) : undefined}
+                  disabled={!handleJump}
                   className={`group relative flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
-                    onJump ? "cursor-pointer" : "cursor-default"
+                    handleJump ? "cursor-pointer" : "cursor-default"
                   }`}
                   aria-current={isActive ? "step" : undefined}
                 >
@@ -161,7 +189,7 @@ export function Sidebar({
                 <li key={c.chapter}>
                   <button
                     type="button"
-                    onClick={() => onSwitchChapter(c.chapter)}
+                    onClick={() => handleSwitch(c.chapter)}
                     className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/5"
                     title={`Last done ${c.last_date}`}
                   >
@@ -210,6 +238,7 @@ export function Sidebar({
           </div>
         )}
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

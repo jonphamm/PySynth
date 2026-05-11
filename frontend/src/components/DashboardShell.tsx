@@ -30,6 +30,7 @@ export function DashboardShell() {
   const startedRef = useRef(false);
   const [pendingSwitch, setPendingSwitch] = useState<string | null>(null);
   const [doneChapters, setDoneChapters] = useState<DoneChapter[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const progress = (index + 1) / wizardOrder.length;
 
   const refreshDoneChapters = useCallback(() => {
@@ -77,17 +78,18 @@ export function DashboardShell() {
     <>
       <MouseFollowerGlow />
 
-      <div className="relative z-10 mx-auto flex h-screen max-w-[1500px] flex-col gap-3 p-4">
+      <div className="relative z-10 mx-auto flex h-screen max-w-[1500px] flex-col gap-3 p-2 sm:p-4">
         {/* Header row: header bar with progress orbit */}
         <div className="flex items-center gap-3">
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <HeaderBar
               chapter={headerChapter}
               concept="MOOC.fi 2026 · Daily"
               xp={120}
+              onMenuClick={() => setMobileMenuOpen(true)}
             />
           </div>
-          <div className="glass flex h-14 items-center gap-3 px-4">
+          <div className="glass hidden h-14 items-center gap-3 px-4 sm:flex">
             <ProgressOrbit value={progress} size={40} stroke={3} />
             <div className="leading-tight">
               <div
@@ -103,8 +105,8 @@ export function DashboardShell() {
           </div>
         </div>
 
-        {/* Three-pane Command Center */}
-        <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr_340px] gap-3">
+        {/* Responsive Command Center: 1 col mobile, 2 col tablet, 3 col desktop */}
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-[260px_1fr] lg:grid-cols-[260px_1fr_340px]">
           <Sidebar
             current={stage}
             onJump={goTo}
@@ -113,6 +115,8 @@ export function DashboardShell() {
             currentChapter={sessionData?.topic.chapter ?? ""}
             onSwitchChapter={handleSwitchChapter}
             doneChapters={doneChapters}
+            mobileOpen={mobileMenuOpen}
+            onMobileClose={() => setMobileMenuOpen(false)}
           />
           <StagePanel wizard={wizard} onSessionLogged={refreshDoneChapters} />
           <MentorPanel />

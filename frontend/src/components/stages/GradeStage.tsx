@@ -69,7 +69,7 @@ export function GradeStage({ wizard }: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header
-        className="border-b px-7 py-5"
+        className="border-b px-4 py-4 sm:px-7 sm:py-5"
         style={{ borderColor: "rgba(255,255,255,0.06)" }}
       >
         <div
@@ -95,7 +95,7 @@ export function GradeStage({ wizard }: Props) {
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-7 py-5 space-y-7">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-7 sm:py-5 space-y-7">
         <Section label="Quiz grade">
           <div className="markdown">
             <ReactMarkdown components={MARKDOWN_COMPONENTS}>
@@ -154,7 +154,7 @@ export function GradeStage({ wizard }: Props) {
       </div>
 
       <footer
-        className="flex items-center justify-end gap-3 border-t px-7 py-4"
+        className="flex items-center justify-end gap-3 border-t px-4 py-3 sm:px-7 sm:py-4"
         style={{ borderColor: "rgba(255,255,255,0.06)" }}
       >
         <button

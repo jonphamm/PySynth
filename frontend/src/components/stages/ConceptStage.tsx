@@ -27,7 +27,7 @@ export function ConceptStage({ wizard }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b px-7 py-5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <header className="border-b px-4 py-4 sm:px-7 sm:py-5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div
           className="font-mono text-[10px] uppercase tracking-[0.4em]"
           style={{ color: "#00f5ff" }}
@@ -42,7 +42,7 @@ export function ConceptStage({ wizard }: Props) {
         </p>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-7 py-5 space-y-7 text-[13.5px] leading-relaxed">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-7 sm:py-5 space-y-7 text-[13.5px] leading-relaxed">
         <Section label="Definition">
           <div className="bullet-md">
             <InlineMarkdown>{review.definition}</InlineMarkdown>
@@ -98,7 +98,7 @@ export function ConceptStage({ wizard }: Props) {
       </div>
 
       <footer
-        className="flex items-center justify-end gap-3 border-t px-7 py-4"
+        className="flex items-center justify-end gap-3 border-t px-4 py-3 sm:px-7 sm:py-4"
         style={{ borderColor: "rgba(255,255,255,0.06)" }}
       >
         <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
