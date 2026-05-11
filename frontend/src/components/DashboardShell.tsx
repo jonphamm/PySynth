@@ -21,6 +21,10 @@ export function DashboardShell() {
   const progress = (index + 1) / wizardOrder.length;
 
   useEffect(() => {
+    if (!sessionData) startedRef.current = false;
+  }, [sessionData]);
+
+  useEffect(() => {
     if (startedRef.current || sessionData) return;
     startedRef.current = true;
     setStatus({ kind: "loading", what: "Generating today's session…" });
