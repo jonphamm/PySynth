@@ -143,6 +143,30 @@ def _safe_score(value: Any, fallback: float = 0.0) -> float:
         return fallback
 
 
+def _looks_degraded(data: dict[str, Any]) -> str | None:
+    """Cheap content-quality check on a validated session payload.
+
+    Catches the failure mode where a free-tier LLM emits structurally-valid
+    JSON whose string values are nonsense (e.g. brace-spam loops inside
+    definition) or whose required arrays are empty. Returns a one-line
+    reason string if degraded; otherwise None.
+    """
+    review = data.get("concept_review") or {}
+    if len(review.get("how_it_works") or []) < 2:
+        return "how_it_works has fewer than 2 entries"
+    if len(review.get("syntax_forms") or []) < 1:
+        return "syntax_forms is empty"
+    if not (review.get("worked_example_code") or "").strip():
+        return "worked_example_code is empty"
+    definition = review.get("definition") or ""
+    for ch in set(definition):
+        if not ch.isspace() and ch * 13 in definition:
+            return f"definition contains a run of {ch!r}*13+ (model degenerated)"
+    if len(data.get("questions") or []) < 3:
+        return "fewer than 3 quiz questions"
+    return None
+
+
 # In-memory cache for today's /session/start responses. Keyed by
 # (date, intent, pin_to_chapter) so a refresh on the same calendar day with
 # the same arguments serves the cached session instead of burning an LLM
@@ -194,6 +218,9 @@ def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
     validated = validate_session_data(data)
+    reason = _looks_degraded(validated)
+    if reason:
+        raise _fail(f"LLM returned a degraded session ({reason}); please retry")
     _session_cache[cache_key] = validated
     return {"kind": "session", **validated}
 

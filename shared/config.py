@@ -16,7 +16,7 @@ CANONICAL_PROGRESS_PATH = WORKSPACE / "Output" / "progress.md"
 GEMINI_MODEL = "gemini-2.5-flash"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 CEREBRAS_MODEL = "qwen-3-235b-a22b-instruct-2507"
-OPENROUTER_MODEL = "openai/gpt-oss-120b:free"
+OPENROUTER_MODEL = "qwen/qwen3-next-80b-a3b-instruct:free"
 
 
 def load_text(path: Path) -> str:
