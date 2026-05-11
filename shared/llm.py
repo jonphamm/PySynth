@@ -3,8 +3,43 @@
 import json
 import os
 import sys
+import time
 
 from .config import CEREBRAS_MODEL, GEMINI_MODEL, GROQ_MODEL
+
+# Error-message hints that indicate a transient (server-side or short-window)
+# failure worth retrying on the SAME provider before falling through to the
+# next one. Daily-quota exhaustion is excluded on purpose — retrying won't help
+# until the day rolls over.
+_TRANSIENT_ERROR_HINTS = (
+    "queue_exceeded",        # Cerebras: shared capacity is saturated
+    "tokens per minute",     # Groq: per-minute token rate limit (TPM)
+    "requests per minute",   # Groq: per-minute request rate limit (RPM)
+)
+
+
+def _is_transient(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(hint in msg for hint in _TRANSIENT_ERROR_HINTS)
+
+
+def _call_with_retry(fn, system_prompt, user_message, *, max_retries=2):
+    """Invoke a provider, retrying on transient errors with short backoff."""
+    last_exc: Exception | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            return fn(system_prompt, user_message)
+        except Exception as exc:
+            last_exc = exc
+            if not _is_transient(exc) or attempt == max_retries:
+                raise
+            wait = 2.0 * (attempt + 1)
+            print(
+                f"[llm] transient failure on attempt {attempt + 1}, retrying in {wait}s: {exc}",
+                file=sys.stderr,
+            )
+            time.sleep(wait)
+    raise last_exc  # unreachable but satisfies the type checker
 
 
 def _import_gemini():
@@ -131,7 +166,7 @@ def _try_chain(providers, system_prompt, user_message):
     errors = []
     for name, fn in providers:
         try:
-            return fn(system_prompt, user_message), name
+            return _call_with_retry(fn, system_prompt, user_message), name
         except Exception as exc:
             errors.append(f"{name}: {exc}")
             print(f"[llm] {name} failed: {exc}", file=sys.stderr)
