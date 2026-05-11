@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { listDoneChapters } from "@/lib/api";
+import { parseChapter } from "@/lib/topic";
 import { wizardOrder } from "@/lib/tokens";
-import type { WizardStage } from "@/types/session";
+import type { DoneChapter, WizardStage } from "@/types/session";
 
 const STAGE_META: Record<
   WizardStage,
@@ -19,6 +22,8 @@ type SidebarProps = {
   onJump?: (stage: WizardStage) => void;
   chapterPointer: string;
   conceptLabel: string;
+  currentChapter: string;
+  onSwitchChapter: (chapter: string) => void;
 };
 
 export function Sidebar({
@@ -26,8 +31,23 @@ export function Sidebar({
   onJump,
   chapterPointer,
   conceptLabel,
+  currentChapter,
+  onSwitchChapter,
 }: SidebarProps) {
   const currentIdx = wizardOrder.indexOf(current);
+  const [doneChapters, setDoneChapters] = useState<DoneChapter[]>([]);
+
+  useEffect(() => {
+    listDoneChapters()
+      .then((res) => setDoneChapters(res.chapters))
+      .catch(() => {
+        /* sidebar list is non-critical — fail silently */
+      });
+  }, []);
+
+  const visibleChapters = doneChapters.filter(
+    (c) => c.chapter !== currentChapter,
+  );
 
   return (
     <aside className="glass relative flex h-full w-[260px] flex-col p-5">
@@ -46,7 +66,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <nav className="relative flex-1">
+      <nav className="relative">
         {/* Vertical progress line behind the icons */}
         <div
           aria-hidden
@@ -131,6 +151,50 @@ export function Sidebar({
           })}
         </ul>
       </nav>
+
+      {visibleChapters.length > 0 && (
+        <div
+          className="mt-4 flex-1 overflow-y-auto border-t pt-4"
+          style={{ borderColor: "rgba(255,255,255,0.08)" }}
+        >
+          <div
+            className="font-mono text-[10px] uppercase tracking-[0.3em]"
+            style={{ color: "#9aa0a6" }}
+          >
+            Past chapters · {visibleChapters.length}
+          </div>
+          <ul className="mt-2 space-y-1">
+            {visibleChapters.map((c) => {
+              const { pointer, title } = parseChapter(c.chapter);
+              return (
+                <li key={c.chapter}>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchChapter(c.chapter)}
+                    className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/5"
+                    title={`Last done ${c.last_date}`}
+                  >
+                    <div
+                      className="truncate text-[12px] font-medium"
+                      style={{ color: "#cdeefd" }}
+                    >
+                      {pointer}
+                    </div>
+                    {title ? (
+                      <div
+                        className="truncate text-[10px]"
+                        style={{ color: "#9aa0a6" }}
+                      >
+                        {title}
+                      </div>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-4 border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         <div className="font-mono text-[10px] uppercase tracking-[0.3em]" style={{ color: "#9aa0a6" }}>

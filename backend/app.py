@@ -21,6 +21,7 @@ from shared.progress import (
     append_progress_row,
     append_solution,
     find_today_daily_row,
+    list_done_chapters,
     pick_next_angle,
     write_exercise_file,
 )
@@ -53,6 +54,7 @@ app.add_middleware(
 
 class StartRequest(BaseModel):
     intent: Literal["advance", "review"] | None = None
+    pin_to_chapter: str | None = None
 
 
 class GradeRequest(BaseModel):
@@ -129,23 +131,31 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/chapters/done")
+def chapters_done() -> dict[str, Any]:
+    return {"chapters": list_done_chapters()}
+
+
 @app.post("/session/start")
 def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
-    today_row = find_today_daily_row()
-    if today_row and req.intent is None:
-        return {
-            "kind": "needs_intent",
-            "today_chapter": today_row["chapter"],
-            "today_concept": today_row["concept"],
-        }
-    if today_row and req.intent in ("advance", "review"):
-        user_msg = start_user_message(
-            same_day_intent=req.intent,
-            same_day_chapter=today_row["chapter"],
-            same_day_concept=today_row["concept"],
-        )
+    if req.pin_to_chapter:
+        user_msg = start_user_message(pin_chapter=req.pin_to_chapter)
     else:
-        user_msg = start_user_message()
+        today_row = find_today_daily_row()
+        if today_row and req.intent is None:
+            return {
+                "kind": "needs_intent",
+                "today_chapter": today_row["chapter"],
+                "today_concept": today_row["concept"],
+            }
+        if today_row and req.intent in ("advance", "review"):
+            user_msg = start_user_message(
+                same_day_intent=req.intent,
+                same_day_chapter=today_row["chapter"],
+                same_day_concept=today_row["concept"],
+            )
+        else:
+            user_msg = start_user_message()
     try:
         data, _provider = call_llm_json(build_system_prompt(), user_msg)
     except Exception as exc:

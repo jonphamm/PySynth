@@ -15,16 +15,35 @@ def start_user_message(
     same_day_intent: str | None = None,
     same_day_chapter: str | None = None,
     same_day_concept: str | None = None,
+    pin_chapter: str | None = None,
 ) -> str:
     """Prompt that asks for today's concept review + 4 quiz questions as JSON.
 
-    When the user has already completed today's session and explicitly chose
-    to either `review` the same chapter or `advance` past it, prepend an
-    OVERRIDE block that contradicts the recipe's "stop and ask" rule and
-    tells the LLM exactly what to do.
+    Three optional override modes:
+    - `pin_chapter`: explicit chapter pin — user clicked a past chapter in
+      the sidebar. Generates a session on that exact chapter. Takes
+      precedence over `same_day_intent` (callers should not set both).
+    - `same_day_intent` + chapter/concept: same-day review or advance,
+      triggered by the SameDayModal when today's session is already logged.
+
+    With no overrides, the prompt asks the LLM to follow the recipe's normal
+    next-uncovered-chapter logic.
     """
     override = ""
-    if same_day_intent and same_day_chapter and same_day_concept:
+    if pin_chapter:
+        override = (
+            "OVERRIDE — explicit chapter pin (review of a past chapter):\n"
+            f'The user has explicitly chosen to revisit the chapter "{pin_chapter}".\n'
+            "Generate today's session on THIS chapter regardless of recent progress.md\n"
+            "rows or the learning plan's auto-advance flow. Treat it as a review of\n"
+            "already-covered material: scan the recent rows for prior takes on this\n"
+            "chapter and either regenerate the same sub-concept with fresh examples\n"
+            "and questions, or pick a complementary sub-concept WITHIN the same\n"
+            "chapter. Do NOT advance to a different chapter, and do NOT drift to an\n"
+            "unrelated sub-concept.\n\n"
+            "---\n\n"
+        )
+    elif same_day_intent and same_day_chapter and same_day_concept:
         if same_day_intent == "review":
             override = (
                 "OVERRIDE — same-day review request:\n"

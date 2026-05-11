@@ -66,14 +66,18 @@ export function useWizard(initial: WizardStage = "concept") {
   }, []);
 
   const startWithIntent = useCallback(
-    async (intent?: StartIntent) => {
-      const loadingMessage =
-        intent === "review"
-          ? "Reviewing from a different angle…"
-          : "Generating today's session…";
+    async (intent?: StartIntent, pinChapter?: string) => {
+      let loadingMessage: string;
+      if (pinChapter) {
+        loadingMessage = "Switching chapter…";
+      } else if (intent === "review") {
+        loadingMessage = "Reviewing from a different angle…";
+      } else {
+        loadingMessage = "Generating today's session…";
+      }
       setStatus({ kind: "loading", what: loadingMessage });
       try {
-        const response = await startSession(intent);
+        const response = await startSession({ intent, pinChapter });
         if (response.kind === "needs_intent") {
           setPendingChoice(response);
           setSessionData(null);
@@ -83,6 +87,12 @@ export function useWizard(initial: WizardStage = "concept") {
         setPendingChoice(null);
         setSessionData(response);
         initAnswerSlotsFor(response.questions.length);
+        setStage("concept");
+        setExerciseResult(null);
+        setGradeResult(null);
+        setReviewResult(null);
+        setCode("# Write your solution here\n\n");
+        setFeeling("");
         setStatus({ kind: "idle" });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

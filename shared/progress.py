@@ -33,6 +33,31 @@ def pick_next_angle() -> str:
     return used[0] if used else "A"
 
 
+def list_done_chapters() -> list[dict]:
+    """Return distinct chapters from Daily / Daily (extra) rows in progress.md,
+    sorted by (part, chapter) numerically. Each entry: {chapter, last_date}."""
+    text = load_text(CANONICAL_PROGRESS_PATH)
+    seen: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.startswith("| 2026-"):
+            continue
+        cells = [c.strip() for c in line.split("|")]
+        if len(cells) < 5 or "Daily" not in cells[2]:
+            continue
+        chapter, date_str = cells[3], cells[1]
+        if chapter and (chapter not in seen or date_str > seen[chapter]):
+            seen[chapter] = date_str
+
+    def sort_key(chapter: str) -> tuple[int, int]:
+        m = re.search(r"Part\s+(\d+)\s*/\s*Ch(?:apter)?\s+(\d+)", chapter, re.IGNORECASE)
+        return (int(m.group(1)), int(m.group(2))) if m else (99, 99)
+
+    return [
+        {"chapter": c, "last_date": d}
+        for c, d in sorted(seen.items(), key=lambda kv: sort_key(kv[0]))
+    ]
+
+
 def find_today_daily_row() -> dict | None:
     """Return `{'chapter': str, 'concept': str}` if today already has a Daily
     row in the canonical progress log, else None. Scans newest-first."""

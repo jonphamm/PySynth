@@ -72,6 +72,17 @@ export type StartResponse =
 /** Intent the frontend can pass to /session/start to resolve a needs_intent. */
 export type StartIntent = "advance" | "review";
 
+/** One past chapter returned by GET /chapters/done. */
+export type DoneChapter = {
+  chapter: string;
+  last_date: string;
+};
+
+/** Returned by GET /chapters/done. */
+export type DoneChaptersResponse = {
+  chapters: DoneChapter[];
+};
+
 /** Returned by POST /session/exercise. */
 export type ExerciseResult = {
   exercise: Exercise;

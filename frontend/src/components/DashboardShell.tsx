@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWizard } from "@/hooks/useWizard";
 import { wizardOrder } from "@/lib/tokens";
 import { parseChapter } from "@/lib/topic";
@@ -11,6 +11,7 @@ import { StagePanel } from "./StagePanel";
 import { MentorPanel } from "./MentorPanel";
 import { MouseFollowerGlow } from "./MouseFollowerGlow";
 import { SameDayModal } from "./SameDayModal";
+import { SwitchChapterModal } from "./SwitchChapterModal";
 import { ProgressOrbit } from "./ui/ProgressOrbit";
 
 export function DashboardShell() {
@@ -25,7 +26,19 @@ export function DashboardShell() {
     status,
   } = wizard;
   const startedRef = useRef(false);
+  const [pendingSwitch, setPendingSwitch] = useState<string | null>(null);
   const progress = (index + 1) / wizardOrder.length;
+
+  const handleSwitchChapter = useCallback(
+    (chapter: string) => {
+      if (sessionData) {
+        setPendingSwitch(chapter);
+      } else {
+        void startWithIntent(undefined, chapter);
+      }
+    },
+    [sessionData, startWithIntent],
+  );
 
   useEffect(() => {
     if (!sessionData && !pendingChoice) startedRef.current = false;
@@ -82,6 +95,8 @@ export function DashboardShell() {
             onJump={goTo}
             chapterPointer={sidebarPointer}
             conceptLabel={sidebarConcept}
+            currentChapter={sessionData?.topic.chapter ?? ""}
+            onSwitchChapter={handleSwitchChapter}
           />
           <StagePanel wizard={wizard} />
           <MentorPanel />
@@ -93,6 +108,18 @@ export function DashboardShell() {
 
       {pendingChoice && (
         <SameDayModal choice={pendingChoice} onChoose={startWithIntent} />
+      )}
+
+      {pendingSwitch && (
+        <SwitchChapterModal
+          targetChapter={pendingSwitch}
+          onCancel={() => setPendingSwitch(null)}
+          onConfirm={async () => {
+            const target = pendingSwitch;
+            setPendingSwitch(null);
+            await startWithIntent(undefined, target);
+          }}
+        />
       )}
     </>
   );

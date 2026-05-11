@@ -1,4 +1,5 @@
 import type {
+  DoneChaptersResponse,
   ExerciseResult,
   GradeResult,
   LogResult,
@@ -21,14 +22,13 @@ class ApiError extends Error {
   }
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit,
+): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    res = await fetch(`${BASE}${path}`, init);
   } catch (err) {
     throw new ApiError(0, `Cannot reach backend at ${BASE} — is it running?`);
   }
@@ -45,8 +45,32 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function startSession(intent?: StartIntent): Promise<StartResponse> {
-  return post<StartResponse>("/session/start", intent ? { intent } : {});
+async function post<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+async function get<T>(path: string): Promise<T> {
+  return request<T>(path, { method: "GET" });
+}
+
+export type StartOptions = {
+  intent?: StartIntent;
+  pinChapter?: string;
+};
+
+export function startSession(opts: StartOptions = {}): Promise<StartResponse> {
+  const body: Record<string, unknown> = {};
+  if (opts.intent) body.intent = opts.intent;
+  if (opts.pinChapter) body.pin_to_chapter = opts.pinChapter;
+  return post<StartResponse>("/session/start", body);
+}
+
+export function listDoneChapters(): Promise<DoneChaptersResponse> {
+  return get<DoneChaptersResponse>("/chapters/done");
 }
 
 export type GradePayload = {
