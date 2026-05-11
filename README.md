@@ -16,6 +16,7 @@ LLM providers (tried in order, first success wins):
 1. **Google Gemini 2.5 Flash** — free tier
 2. **Groq Llama 3.3 70B** — fallback
 3. **Cerebras Qwen 3 235B** — second fallback
+4. **OpenRouter (`openai/gpt-oss-120b:free`)** — final fallback when the first three are quota-exhausted or saturated
 
 ## Setup
 
@@ -43,6 +44,7 @@ Free API keys:
 - Gemini: <https://aistudio.google.com/apikey>
 - Groq: <https://console.groq.com/keys>
 - Cerebras: <https://cloud.cerebras.ai/platform/api-keys>
+- OpenRouter: <https://openrouter.ai/keys>
 
 ## Run
 
