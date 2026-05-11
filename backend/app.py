@@ -2,15 +2,11 @@
 
 Reuses everything in `shared/` so there's no logic duplication between this
 backend and the Streamlit `tutor.py` app. Both are first-class clients of the
-shared module.
+shared module and share the canonical `Output/progress.md` log.
 
-Run (from `g:\\My Drive\\Python\\`):
+Run (from `C:\\dev\\pysynth`):
     pip install -r backend/requirements.txt
-    set PYSYNTH_DEV=1
     uvicorn backend.app:app --reload --port 8000
-
-The PYSYNTH_DEV flag routes progress writes to `Output/progress-pysynth.md`
-during Stage 4.1 so PySynth doesn't clobber Streamlit's canonical log.
 """
 
 from datetime import date

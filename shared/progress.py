@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from .config import EXERCISES_DIR, CANONICAL_PROGRESS_PATH, load_text, progress_path
+from .config import EXERCISES_DIR, CANONICAL_PROGRESS_PATH, load_text
 
 ANGLES = {
     "A": "Sysadmin / day job (email-marketing ops, AD, log parsing, CSV diffs, vendor APIs)",
@@ -18,12 +18,8 @@ def _daily_rows(text: str) -> list[str]:
 
 
 def pick_next_angle() -> str:
-    """Pick A/B/C based on the last 3 Daily rows in the active progress log.
-
-    "Active" = canonical for Streamlit, dev log for backend (when PYSYNTH_DEV is
-    set). Both apps consult the same selection rule but against their own log.
-    """
-    text = load_text(progress_path())
+    """Pick A/B/C based on the last 3 Daily rows in the progress log."""
+    text = load_text(CANONICAL_PROGRESS_PATH)
     last_3 = _daily_rows(text)[-3:]
     used = []
     for row in last_3:
@@ -40,7 +36,7 @@ def get_current_position() -> str:
     """Snapshot of recent sessions + learning plan, embedded in the system prompt."""
     from .config import PLAN_PATH
 
-    progress = load_text(progress_path())
+    progress = load_text(CANONICAL_PROGRESS_PATH)
     plan = load_text(PLAN_PATH)
     rows = [line for line in progress.splitlines() if line.startswith("| 2026-")]
     last_rows = "\n".join(rows[-5:]) if rows else "(no sessions yet)"
@@ -65,19 +61,12 @@ def append_solution(path: Path, code: str) -> None:
 
 
 def append_progress_row(row: str, *, target: Path | None = None) -> Path:
-    """Append a row to the progress log. Defaults to the active log per env.
-
-    Streamlit calls this without `target`, hitting the canonical log via
-    `progress_path()`. Backend can override to write directly to a specific
-    path for testing.
-    """
-    dest = target if target is not None else progress_path()
+    """Append a row to the progress log. Tests may override `target`."""
+    dest = target if target is not None else CANONICAL_PROGRESS_PATH
     dest.parent.mkdir(parents=True, exist_ok=True)
     with dest.open("a", encoding="utf-8") as f:
         f.write(row)
     return dest
 
 
-# Streamlit imports this constant directly so it always hits the canonical log
-# regardless of PYSYNTH_DEV.
 PROGRESS_PATH = CANONICAL_PROGRESS_PATH
