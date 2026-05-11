@@ -16,6 +16,12 @@ type MentorPanelProps = {
 
 type ChatStatus = "idle" | "thinking" | "error";
 
+const EXAMPLE_PROMPTS = [
+  "Walk me through one more example.",
+  "How would I use this in a cybersecurity script?",
+  "What's a common beginner mistake here?",
+];
+
 const MARKDOWN_COMPONENTS = {
   code({
     className,
@@ -60,36 +66,39 @@ export function MentorPanel({ chapter, concept, stage }: MentorPanelProps) {
     }
   }, [messages, status]);
 
-  const send = useCallback(async () => {
-    const question = input.trim();
-    if (!question || status === "thinking") return;
-    const nextHistory: ChatMessage[] = [
-      ...messages,
-      { role: "user", text: question },
-    ];
-    setMessages(nextHistory);
-    setInput("");
-    setStatus("thinking");
-    setErrorMsg("");
-    try {
-      const result = await askMentor({
-        question,
-        chapter,
-        concept,
-        stage,
-        history: messages,
-      });
-      setMessages([
-        ...nextHistory,
-        { role: "mentor", text: result.answer },
-      ]);
-      setStatus("idle");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setStatus("error");
-      setErrorMsg(message);
-    }
-  }, [input, status, messages, chapter, concept, stage]);
+  const send = useCallback(
+    async (override?: string) => {
+      const question = (override ?? input).trim();
+      if (!question || status === "thinking") return;
+      const nextHistory: ChatMessage[] = [
+        ...messages,
+        { role: "user", text: question },
+      ];
+      setMessages(nextHistory);
+      setInput("");
+      setStatus("thinking");
+      setErrorMsg("");
+      try {
+        const result = await askMentor({
+          question,
+          chapter,
+          concept,
+          stage,
+          history: messages,
+        });
+        setMessages([
+          ...nextHistory,
+          { role: "mentor", text: result.answer },
+        ]);
+        setStatus("idle");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setStatus("error");
+        setErrorMsg(message);
+      }
+    },
+    [input, status, messages, chapter, concept, stage],
+  );
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -124,14 +133,30 @@ export function MentorPanel({ chapter, concept, stage }: MentorPanelProps) {
         }}
       >
         {messages.length === 0 && status === "idle" && (
-          <p
-            className="text-[12px] leading-relaxed"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Ask anything about today&apos;s concept — examples, intuition, how
-            to use it at work. I won&apos;t spoil the quiz or solve the
-            exercise.
-          </p>
+          <div className="space-y-2">
+            <p
+              className="text-[10px] uppercase tracking-[0.3em]"
+              style={{ color: "#9aa0a6" }}
+            >
+              Try asking
+            </p>
+            {EXAMPLE_PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => void send(prompt)}
+                disabled={!chapter || status !== "idle"}
+                className="block w-full rounded-md px-3 py-2 text-left text-[12px] leading-snug transition-colors hover:bg-white/5 disabled:opacity-50"
+                style={{
+                  background: "rgba(0,245,255,0.04)",
+                  border: "1px solid rgba(0,245,255,0.18)",
+                  color: "rgba(205,238,253,0.85)",
+                }}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
         )}
 
         <div className="space-y-3">
