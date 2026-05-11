@@ -25,6 +25,42 @@ def _is_transient(exc: Exception) -> bool:
     return any(hint in msg for hint in _TRANSIENT_ERROR_HINTS)
 
 
+def _strict_json_loads(text: str) -> dict:
+    """Parse JSON from an LLM response, tolerating markdown fences and
+    surrounding prose. Some free-tier models drop ```json fences or a
+    reasoning preamble around an otherwise-clean JSON object even when
+    asked for json_object mode. Raises ValueError with a preview snippet
+    if nothing parses."""
+    if not text:
+        raise ValueError("LLM returned empty response")
+    s = text.strip()
+
+    if s.startswith("```"):
+        s = s.split("\n", 1)[1] if "\n" in s else ""
+        if s.rstrip().endswith("```"):
+            s = s.rstrip()[:-3]
+        s = s.strip()
+
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        pass
+
+    first = s.find("{")
+    last = s.rfind("}")
+    if first >= 0 and last > first:
+        try:
+            return json.loads(s[first:last + 1])
+        except json.JSONDecodeError as exc:
+            preview = s[first:first + 200]
+            raise ValueError(
+                f"LLM returned malformed JSON ({exc.msg} at char {exc.pos}). "
+                f"Preview: {preview}..."
+            ) from exc
+
+    raise ValueError(f"LLM response had no JSON object: {s[:200]}...")
+
+
 def _call_with_retry(fn, system_prompt, user_message, *, max_retries=2):
     """Invoke a provider, retrying on transient errors with short backoff."""
     last_exc: Exception | None = None
@@ -119,6 +155,7 @@ def call_openrouter(system_prompt: str, user_message: str) -> str:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
+        extra_body={"max_tokens": 8000},
     )
     return response.choices[0].message.content
 
@@ -135,7 +172,7 @@ def call_gemini_json(system_prompt: str, user_message: str) -> dict:
         contents=full_prompt,
         config={"response_mime_type": "application/json"},
     )
-    return json.loads(response.text)
+    return _strict_json_loads(response.text)
 
 
 def call_groq_json(system_prompt: str, user_message: str) -> dict:
@@ -152,7 +189,7 @@ def call_groq_json(system_prompt: str, user_message: str) -> dict:
         ],
         response_format={"type": "json_object"},
     )
-    return json.loads(response.choices[0].message.content)
+    return _strict_json_loads(response.choices[0].message.content)
 
 
 def call_cerebras_json(system_prompt: str, user_message: str) -> dict:
@@ -169,7 +206,7 @@ def call_cerebras_json(system_prompt: str, user_message: str) -> dict:
         ],
         response_format={"type": "json_object"},
     )
-    return json.loads(response.choices[0].message.content)
+    return _strict_json_loads(response.choices[0].message.content)
 
 
 def call_openrouter_json(system_prompt: str, user_message: str) -> dict:
@@ -185,8 +222,9 @@ def call_openrouter_json(system_prompt: str, user_message: str) -> dict:
             {"role": "user", "content": user_message},
         ],
         response_format={"type": "json_object"},
+        extra_body={"max_tokens": 8000},
     )
-    return json.loads(response.choices[0].message.content)
+    return _strict_json_loads(response.choices[0].message.content)
 
 
 PROVIDERS_TEXT = [
