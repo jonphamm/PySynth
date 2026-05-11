@@ -9,9 +9,8 @@ __pycache__/
 .venv/
 venv/
 
-# Frontend (Next.js PySynth app lives at C:\dev\pysynth; this folder
-# only ever contains stray node_modules from a failed Drive npm install)
-pysynth/
+# Frontend (Next.js — frontend/.gitignore handles its own node_modules,
+# .next, *.tsbuildinfo, .env*. Nothing extra needed at root.)
 
 # IDE
 .vscode/

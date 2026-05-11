@@ -1,0 +1,322 @@
+@import "tailwindcss";
+
+/* PySynth design tokens — Tailwind v4 @theme block */
+@theme inline {
+  --color-obsidian: #020203;
+  --color-obsidian-2: #0a0a0e;
+  --color-cyan-base: #00f5ff;
+  --color-cyan-dim: #00b8c0;
+  --color-violet-base: #7000ff;
+  --color-violet-dim: #5500cc;
+  --color-glass-border: rgba(255, 255, 255, 0.10);
+  --color-glass-surface: rgba(255, 255, 255, 0.04);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-fira-code);
+
+  --animate-conic-flow: conicFlow 4s linear infinite;
+  --animate-orb-pulse: orbPulse 2.6s ease-in-out infinite;
+  --animate-data-stream: dataStream 3s linear infinite;
+}
+
+@property --tutor-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes conicFlow {
+  from { --tutor-angle: 0deg; }
+  to   { --tutor-angle: 360deg; }
+}
+
+@keyframes orbPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 24px var(--color-cyan-base),
+      0 0 60px rgba(0, 245, 255, 0.35);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow:
+      0 0 40px var(--color-cyan-base),
+      0 0 100px rgba(0, 245, 255, 0.55);
+  }
+}
+
+@keyframes dataStream {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+:root {
+  color-scheme: dark;
+  background: var(--color-obsidian);
+  color: rgb(245 245 245);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-obsidian);
+  color: rgb(245 245 245);
+  font-family: var(--font-sans), -apple-system, "Segoe UI", system-ui, sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+body {
+  position: relative;
+}
+
+/* Mesh gradient background — fixed, behind everything */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(0, 245, 255, 0.18) 0%, rgba(0, 245, 255, 0) 45%),
+    radial-gradient(circle at 85% 75%, rgba(112, 0, 255, 0.20) 0%, rgba(112, 0, 255, 0) 45%),
+    radial-gradient(circle at 50% 50%, rgba(0, 245, 255, 0.05) 0%, rgba(0, 0, 0, 0) 60%),
+    var(--color-obsidian);
+}
+
+/* Subtle dotted grid overlay for the "terminal" feel */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: 0 0;
+  pointer-events: none;
+}
+
+/* ------------- Glassmorphism 2.0 utilities ------------- */
+@layer components {
+  .glass {
+    background: var(--color-glass-surface);
+    backdrop-filter: blur(25px) saturate(140%);
+    -webkit-backdrop-filter: blur(25px) saturate(140%);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 1rem;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  .glass-strong {
+    background: rgba(10, 10, 14, 0.55);
+    backdrop-filter: blur(25px) saturate(140%);
+    -webkit-backdrop-filter: blur(25px) saturate(140%);
+    border: 1px solid var(--color-glass-border);
+    border-radius: 1rem;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      0 12px 40px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Conic-gradient flowing border — wrap content; uses ::before pseudo */
+  .flowing-border {
+    position: relative;
+    border-radius: 1rem;
+    isolation: isolate;
+  }
+  .flowing-border::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--tutor-angle),
+      rgba(0, 245, 255, 0.0) 0deg,
+      rgba(0, 245, 255, 0.85) 90deg,
+      rgba(112, 0, 255, 0.85) 180deg,
+      rgba(0, 245, 255, 0.0) 270deg,
+      rgba(0, 245, 255, 0.0) 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+            mask-composite: exclude;
+    animation: conicFlow 6s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* CRT scanline overlay for terminal feel */
+  .scanlines {
+    position: relative;
+  }
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.025) 0px,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    border-radius: inherit;
+    mix-blend-mode: overlay;
+  }
+}
+
+/* Concept-review bullets — markdown-aware, indented, IDE-feel emphasis */
+.bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.bullet-list > li {
+  position: relative;
+  padding-left: 1.4rem;
+  line-height: 1.7;
+}
+.bullet-list > li::before {
+  content: "";
+  position: absolute;
+  left: 0.35rem;
+  top: 0.65em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00f5ff 0%, #7000ff 100%);
+  box-shadow: 0 0 6px rgba(0, 245, 255, 0.6);
+}
+.bullet-md {
+  color: rgba(245, 245, 245, 0.88);
+}
+.bullet-md strong {
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 0 14px rgba(0, 245, 255, 0.6);
+  letter-spacing: 0.005em;
+}
+.bullet-md code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: rgba(0, 245, 255, 0.10);
+  border: 1px solid rgba(0, 245, 255, 0.22);
+  color: #cdeefd;
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+.bullet-md strong code,
+.markdown strong code {
+  color: #ffffff;
+  background: rgba(0, 245, 255, 0.20);
+  border-color: rgba(0, 245, 255, 0.55);
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.65);
+  font-weight: 600;
+}
+.bullet-md em {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Markdown rendering inside GradeStage — aligned with bullet-md visual language */
+.markdown {
+  color: rgba(245, 245, 245, 0.88);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.markdown p { margin: 0.45em 0; }
+.markdown p:first-child { margin-top: 0; }
+.markdown p:last-child { margin-bottom: 0; }
+.markdown strong {
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 0 12px rgba(0, 245, 255, 0.45);
+  letter-spacing: 0.005em;
+}
+.markdown em {
+  color: rgba(255, 255, 255, 0.78);
+}
+.markdown ul, .markdown ol {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5em 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.markdown li {
+  position: relative;
+  padding-left: 1.4rem;
+  line-height: 1.7;
+}
+.markdown ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0.35rem;
+  top: 0.65em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00f5ff 0%, #7000ff 100%);
+  box-shadow: 0 0 6px rgba(0, 245, 255, 0.6);
+}
+.markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: rgba(0, 245, 255, 0.10);
+  border: 1px solid rgba(0, 245, 255, 0.22);
+  color: #cdeefd;
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+.markdown pre {
+  margin: 0.6em 0;
+}
+.markdown pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 {
+  color: #ffffff;
+  margin: 0.7em 0 0.35em 0;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* Thin scrollbars — only colored on hover */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(0, 245, 255, 0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 255, 0.35);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 255, 0.6);
+}
