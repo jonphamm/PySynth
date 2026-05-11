@@ -1,4 +1,4 @@
-"""System prompt + user-message builders shared by Streamlit and the FastAPI backend."""
+"""System prompt + user-message builders used by the FastAPI backend."""
 
 from .config import RECIPE_PATH, load_text
 from .progress import ANGLES, get_current_position
@@ -86,10 +86,10 @@ def grade_user_message(
 ) -> str:
     """Prompt that grades the 4 quiz answers.
 
-    Streamlit uses markdown mode (`json_wrapper=False`) so the response is raw
-    markdown. Backend uses `json_wrapper=True` so the response is a JSON object
-    `{"grade_markdown": "...", "score_correct": int, "score_total": int}` that
-    `call_llm_json` can parse.
+    With `json_wrapper=True` the response is a JSON object
+    `{"grade_markdown": "...", "score_correct": int, "score_total": int}`
+    that `call_llm_json` can parse. The markdown-only mode (`False`) is
+    legacy from the Streamlit prototype and currently unused.
     """
     padded = list(answers) + [""] * (4 - len(answers))
     padded = padded[:4]
@@ -139,10 +139,7 @@ def grade_user_message(
 
 
 def exercise_user_message(angle: str, *, json_wrapper: bool = True) -> str:
-    """Prompt that produces the coding exercise + apply-at-work paragraph.
-
-    Streamlit and backend both use JSON mode here (existing behavior).
-    """
+    """Prompt that produces the coding exercise + apply-at-work paragraph (JSON mode)."""
     return (
         "Generate the coding exercise and apply-at-work as a JSON object with EXACTLY this shape "
         "(no markdown, no extra commentary — just the JSON):\n\n"
@@ -172,8 +169,9 @@ def exercise_user_message(angle: str, *, json_wrapper: bool = True) -> str:
 def review_user_message(exercise_text: str, code: str, *, json_wrapper: bool = False) -> str:
     """Prompt that reviews the user's submitted code.
 
-    Streamlit uses markdown mode. Backend uses `json_wrapper=True` to wrap the
-    markdown in `{"review_markdown": "...", "verdict": "pass"|"close"|"miss"}`.
+    With `json_wrapper=True` the markdown is wrapped in
+    `{"review_markdown": "...", "verdict": "pass"|"close"|"miss"}`. The
+    markdown-only mode (`False`) is legacy from the Streamlit prototype.
     """
     body = (
         f"Exercise was:\n\n{exercise_text}\n\n"

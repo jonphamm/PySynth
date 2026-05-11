@@ -1,8 +1,7 @@
 """FastAPI backend serving the PySynth Next.js frontend.
 
-Reuses everything in `shared/` so there's no logic duplication between this
-backend and the Streamlit `tutor.py` app. Both are first-class clients of the
-shared module and share the canonical `Output/progress.md` log.
+Reuses everything in `shared/` (chapters, prompts, LLM fan-out, progress
+log IO) so tutoring logic lives in exactly one place.
 
 Run (from `C:\\dev\\pysynth`):
     pip install -r backend/requirements.txt

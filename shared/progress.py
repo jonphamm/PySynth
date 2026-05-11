@@ -67,6 +67,3 @@ def append_progress_row(row: str, *, target: Path | None = None) -> Path:
     with dest.open("a", encoding="utf-8") as f:
         f.write(row)
     return dest
-
-
-PROGRESS_PATH = CANONICAL_PROGRESS_PATH

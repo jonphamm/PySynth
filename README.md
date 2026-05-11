@@ -102,5 +102,5 @@ Friends can clone the repo and run their own copy without seeing each other's da
 - [x] Stage 2 — full daily session (concept + 4 quiz Qs + exercise + apply-at-work + log)
 - [x] Stage 3 — Streamlit prototype on Streamlit Community Cloud
 - [x] Stage 4 — extract `shared/`, FastAPI backend, Next.js frontend, monorepo migration
-- [ ] Stage 5 — retire the Streamlit prototype; PySynth is the only client
+- [x] Stage 5 — retire the Streamlit prototype; PySynth is the only client
 - [ ] Stage 6 — deploy backend + frontend somewhere reachable from a phone

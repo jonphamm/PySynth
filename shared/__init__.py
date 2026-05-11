@@ -1,2 +1,1 @@
-"""Shared logic for the Python Tutor — used by both Streamlit (`tutor.py`)
-and the FastAPI backend (`backend/app.py`)."""
+"""Shared tutoring logic — chapters, prompts, LLM fan-out, progress IO."""
