@@ -26,11 +26,10 @@ def _is_transient(exc: Exception) -> bool:
 
 
 def _strict_json_loads(text: str) -> dict:
-    """Parse JSON from an LLM response, tolerating markdown fences and
-    surrounding prose. Some free-tier models drop ```json fences or a
-    reasoning preamble around an otherwise-clean JSON object even when
-    asked for json_object mode. Raises ValueError with a preview snippet
-    if nothing parses."""
+    """Parse JSON from an LLM response, tolerating markdown fences, surrounding
+    prose, and minor internal corruption (unescaped quotes, missing commas,
+    raw newlines in strings, trailing commas). Free-tier models drift in all
+    of these ways. Final fallback uses json_repair before raising."""
     if not text:
         raise ValueError("LLM returned empty response")
     s = text.strip()
@@ -48,17 +47,27 @@ def _strict_json_loads(text: str) -> dict:
 
     first = s.find("{")
     last = s.rfind("}")
-    if first >= 0 and last > first:
-        try:
-            return json.loads(s[first:last + 1])
-        except json.JSONDecodeError as exc:
-            preview = s[first:first + 200]
-            raise ValueError(
-                f"LLM returned malformed JSON ({exc.msg} at char {exc.pos}). "
-                f"Preview: {preview}..."
-            ) from exc
+    candidate = s[first:last + 1] if first >= 0 and last > first else s
 
-    raise ValueError(f"LLM response had no JSON object: {s[:200]}...")
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        repair_json = _import_json_repair()
+        repaired = repair_json(candidate, return_objects=True)
+        if isinstance(repaired, dict):
+            return repaired
+        raise ValueError(
+            f"json_repair returned a {type(repaired).__name__}, expected dict"
+        )
+    except Exception as exc:
+        preview = candidate[:200]
+        raise ValueError(
+            f"LLM returned malformed JSON, and json_repair could not recover it. "
+            f"Preview: {preview}..."
+        ) from exc
 
 
 def _call_with_retry(fn, system_prompt, user_message, *, max_retries=2):
@@ -98,6 +107,11 @@ def _import_cerebras():
 def _import_openai():
     from openai import OpenAI
     return OpenAI
+
+
+def _import_json_repair():
+    from json_repair import repair_json
+    return repair_json
 
 
 def call_gemini(system_prompt: str, user_message: str) -> str:
