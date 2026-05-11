@@ -10,9 +10,30 @@ def build_system_prompt() -> str:
     return f"{recipe}\n\n---\n\n# Current state — read this before generating today's session\n\n{state}\n"
 
 
-def start_user_message() -> str:
-    """Prompt that asks for today's concept review + 4 quiz questions as JSON."""
-    return (
+def start_user_message(
+    *,
+    review_chapter: str | None = None,
+    review_concept: str | None = None,
+) -> str:
+    """Prompt that asks for today's concept review + 4 quiz questions as JSON.
+
+    When `review_chapter` and `review_concept` are both supplied, prepend an
+    OVERRIDE block instructing the LLM to regenerate the same chapter/concept
+    with fresh examples and questions rather than advancing.
+    """
+    override = ""
+    if review_chapter and review_concept:
+        override = (
+            "OVERRIDE — same-day review request:\n"
+            f'The user has already completed today\'s session on chapter "{review_chapter}" /\n'
+            f'concept "{review_concept}". They explicitly chose to REVIEW the same chapter from\n'
+            "a different angle. Generate the session for the SAME chapter AND the SAME\n"
+            "granular concept. Use a different worked_example_code, different syntax_forms\n"
+            "examples, and entirely new questions. Do NOT advance to a different chapter or\n"
+            "sub-concept.\n\n"
+            "---\n\n"
+        )
+    return override + (
         "Generate today's session content as a JSON object with EXACTLY this shape "
         "(no markdown, no extra commentary — just the JSON):\n\n"
         "{\n"

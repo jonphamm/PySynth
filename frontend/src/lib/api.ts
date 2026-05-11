@@ -3,7 +3,8 @@ import type {
   GradeResult,
   LogResult,
   ReviewResult,
-  SessionData,
+  StartIntent,
+  StartResponse,
   Topic,
   Exercise,
   Question,
@@ -44,8 +45,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function startSession(): Promise<SessionData> {
-  return post<SessionData>("/session/start", {});
+export function startSession(intent?: StartIntent): Promise<StartResponse> {
+  return post<StartResponse>("/session/start", intent ? { intent } : {});
 }
 
 export type GradePayload = {

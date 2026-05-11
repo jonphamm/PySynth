@@ -10,7 +10,7 @@ Run (from `C:\\dev\\pysynth`):
 
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +20,7 @@ from shared.llm import call_llm_json
 from shared.progress import (
     append_progress_row,
     append_solution,
+    find_today_daily_row,
     pick_next_angle,
     write_exercise_file,
 )
@@ -51,7 +52,7 @@ app.add_middleware(
 # ---------------- Pydantic models ----------------
 
 class StartRequest(BaseModel):
-    pass
+    intent: Literal["advance", "review"] | None = None
 
 
 class GradeRequest(BaseModel):
@@ -129,12 +130,26 @@ def health() -> dict[str, str]:
 
 
 @app.post("/session/start")
-def session_start(_: StartRequest = StartRequest()) -> dict[str, Any]:
+def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
+    today_row = find_today_daily_row()
+    if today_row and req.intent is None:
+        return {
+            "kind": "needs_intent",
+            "today_chapter": today_row["chapter"],
+            "today_concept": today_row["concept"],
+        }
+    if req.intent == "review" and today_row:
+        user_msg = start_user_message(
+            review_chapter=today_row["chapter"],
+            review_concept=today_row["concept"],
+        )
+    else:
+        user_msg = start_user_message()
     try:
-        data, _provider = call_llm_json(build_system_prompt(), start_user_message())
+        data, _provider = call_llm_json(build_system_prompt(), user_msg)
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
-    return validate_session_data(data)
+    return {"kind": "session", **validate_session_data(data)}
 
 
 @app.post("/session/grade", response_model=GradeResponse)

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useWizard } from "@/hooks/useWizard";
 import { wizardOrder } from "@/lib/tokens";
-import { startSession } from "@/lib/api";
 import { parseChapter } from "@/lib/topic";
 import { Sidebar } from "./Sidebar";
 import { HeaderBar } from "./HeaderBar";
@@ -11,34 +10,32 @@ import { FooterStatus } from "./FooterStatus";
 import { StagePanel } from "./StagePanel";
 import { MentorPanel } from "./MentorPanel";
 import { MouseFollowerGlow } from "./MouseFollowerGlow";
+import { SameDayModal } from "./SameDayModal";
 import { ProgressOrbit } from "./ui/ProgressOrbit";
 
 export function DashboardShell() {
   const wizard = useWizard();
-  const { stage, goTo, index, sessionData, setSessionData, status, setStatus, initAnswerSlots } =
-    wizard;
+  const {
+    stage,
+    goTo,
+    index,
+    sessionData,
+    pendingChoice,
+    startWithIntent,
+    status,
+  } = wizard;
   const startedRef = useRef(false);
   const progress = (index + 1) / wizardOrder.length;
 
   useEffect(() => {
-    if (!sessionData) startedRef.current = false;
-  }, [sessionData]);
+    if (!sessionData && !pendingChoice) startedRef.current = false;
+  }, [sessionData, pendingChoice]);
 
   useEffect(() => {
-    if (startedRef.current || sessionData) return;
+    if (startedRef.current || sessionData || pendingChoice) return;
     startedRef.current = true;
-    setStatus({ kind: "loading", what: "Generating today's session…" });
-    startSession()
-      .then((data) => {
-        setSessionData(data);
-        initAnswerSlots(data.questions.length);
-        setStatus({ kind: "idle" });
-      })
-      .catch((err: Error) => {
-        startedRef.current = false;
-        setStatus({ kind: "error", message: err.message });
-      });
-  }, [sessionData, setSessionData, setStatus, initAnswerSlots]);
+    void startWithIntent();
+  }, [sessionData, pendingChoice, startWithIntent]);
 
   const headerChapter = sessionData?.topic
     ? `${sessionData.topic.chapter} — ${sessionData.topic.concept}`
@@ -93,6 +90,10 @@ export function DashboardShell() {
         {/* Footer */}
         <FooterStatus status={status} />
       </div>
+
+      {pendingChoice && (
+        <SameDayModal choice={pendingChoice} onChoose={startWithIntent} />
+      )}
     </>
   );
 }

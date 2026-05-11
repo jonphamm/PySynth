@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { startSession } from "@/lib/api";
 import { wizardOrder } from "@/lib/tokens";
 import type {
   ExerciseResult,
   GradeResult,
+  NeedsIntent,
   ReviewResult,
   SessionData,
+  StartIntent,
   Status,
   WizardStage,
 } from "@/types/session";
@@ -22,6 +25,7 @@ export function useWizard(initial: WizardStage = "concept") {
   );
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null);
+  const [pendingChoice, setPendingChoice] = useState<NeedsIntent | null>(null);
 
   const [answers, setAnswers] = useState<string[]>([]);
   const [pickedIndexes, setPickedIndexes] = useState<(number | null)[]>([]);
@@ -48,12 +52,45 @@ export function useWizard(initial: WizardStage = "concept") {
     setExerciseResult(null);
     setGradeResult(null);
     setReviewResult(null);
+    setPendingChoice(null);
     setAnswers([]);
     setPickedIndexes([]);
     setCode("# Write your solution here\n\n");
     setFeeling("");
     setStatus({ kind: "idle" });
   }, []);
+
+  const initAnswerSlotsFor = useCallback((n: number) => {
+    setAnswers(Array.from({ length: n }, () => ""));
+    setPickedIndexes(Array.from({ length: n }, () => null));
+  }, []);
+
+  const startWithIntent = useCallback(
+    async (intent?: StartIntent) => {
+      const loadingMessage =
+        intent === "review"
+          ? "Reviewing from a different angle…"
+          : "Generating today's session…";
+      setStatus({ kind: "loading", what: loadingMessage });
+      try {
+        const response = await startSession(intent);
+        if (response.kind === "needs_intent") {
+          setPendingChoice(response);
+          setSessionData(null);
+          setStatus({ kind: "idle" });
+          return;
+        }
+        setPendingChoice(null);
+        setSessionData(response);
+        initAnswerSlotsFor(response.questions.length);
+        setStatus({ kind: "idle" });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setStatus({ kind: "error", message });
+      }
+    },
+    [initAnswerSlotsFor],
+  );
 
   const setAnswer = useCallback((i: number, text: string) => {
     setAnswers((prev) => {
@@ -98,6 +135,8 @@ export function useWizard(initial: WizardStage = "concept") {
     setGradeResult,
     reviewResult,
     setReviewResult,
+    pendingChoice,
+    startWithIntent,
     answers,
     pickedIndexes,
     setAnswer,

@@ -49,12 +49,28 @@ export type ApplyAtWork = {
   text: string;
 };
 
-/** Returned by POST /session/start. */
+/** Inner shape of a generated session — returned inside `SessionResponse`. */
 export type SessionData = {
   topic: Topic;
   concept_review: ConceptReview;
   questions: Question[];
 };
+
+/** Backend signal that today already has a logged session and the user must
+ * choose whether to review the same chapter or advance to the next one. */
+export type NeedsIntent = {
+  kind: "needs_intent";
+  today_chapter: string;
+  today_concept: string;
+};
+
+/** Discriminated union returned by POST /session/start. */
+export type StartResponse =
+  | ({ kind: "session" } & SessionData)
+  | NeedsIntent;
+
+/** Intent the frontend can pass to /session/start to resolve a needs_intent. */
+export type StartIntent = "advance" | "review";
 
 /** Returned by POST /session/exercise. */
 export type ExerciseResult = {

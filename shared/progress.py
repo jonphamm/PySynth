@@ -1,6 +1,7 @@
 """Progress log + exercise file IO. Angle rotation logic."""
 
 import re
+from datetime import date
 from pathlib import Path
 
 from .config import EXERCISES_DIR, CANONICAL_PROGRESS_PATH, load_text
@@ -30,6 +31,24 @@ def pick_next_angle() -> str:
         if candidate not in used:
             return candidate
     return used[0] if used else "A"
+
+
+def find_today_daily_row() -> dict | None:
+    """Return `{'chapter': str, 'concept': str}` if today already has a Daily
+    row in the canonical progress log, else None. Scans newest-first."""
+    text = load_text(CANONICAL_PROGRESS_PATH)
+    today = date.today().isoformat()
+    prefix = f"| {today} "
+    for line in reversed(text.splitlines()):
+        if not line.startswith(prefix):
+            continue
+        cells = [c.strip() for c in line.split("|")]
+        # cells[0] is the leading-empty pre-pipe slot. Real cells start at [1].
+        # Row shape: '', date, type, chapter, topic, quiz, exercise, work_apply, note, ''
+        if len(cells) < 5 or "Daily" not in cells[2]:
+            continue
+        return {"chapter": cells[3], "concept": cells[4]}
+    return None
 
 
 def get_current_position() -> str:
