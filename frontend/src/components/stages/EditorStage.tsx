@@ -123,9 +123,9 @@ export function EditorStage({ wizard }: Props) {
           >
             Task
           </div>
-          <p className="bullet-md text-[13.5px] leading-relaxed">
+          <div className="bullet-md text-[13.5px] leading-relaxed">
             <InlineMarkdown>{exercise.task}</InlineMarkdown>
-          </p>
+          </div>
         </section>
 
         {exercise.expected_output && (

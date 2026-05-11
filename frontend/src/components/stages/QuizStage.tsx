@@ -147,9 +147,9 @@ function QuestionCard({
       >
         Question {index + 1}
       </div>
-      <p className="bullet-md text-[14px] font-medium" style={{ color: "rgba(245,245,245,0.95)" }}>
+      <div className="bullet-md text-[14px] font-medium" style={{ color: "rgba(245,245,245,0.95)" }}>
         <InlineMarkdown>{q.text}</InlineMarkdown>
-      </p>
+      </div>
       {q.type === "mc" && q.code && (
         <div className="mt-3">
           <SyntaxHighlight code={q.code} />

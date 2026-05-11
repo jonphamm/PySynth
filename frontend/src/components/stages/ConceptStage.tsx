@@ -44,9 +44,9 @@ export function ConceptStage({ wizard }: Props) {
 
       <div className="flex-1 min-h-0 overflow-y-auto px-7 py-5 space-y-7 text-[13.5px] leading-relaxed">
         <Section label="Definition">
-          <p className="bullet-md">
+          <div className="bullet-md">
             <InlineMarkdown>{review.definition}</InlineMarkdown>
-          </p>
+          </div>
         </Section>
 
         <Section label="How it works">
@@ -79,21 +79,21 @@ export function ConceptStage({ wizard }: Props) {
         </Section>
 
         <Section label="When to use it">
-          <p className="bullet-md">
+          <div className="bullet-md">
             <InlineMarkdown>{review.when_to_use}</InlineMarkdown>
-          </p>
+          </div>
         </Section>
 
         <Section label="Analogy">
-          <p className="bullet-md">
+          <div className="bullet-md">
             <InlineMarkdown>{review.analogy}</InlineMarkdown>
-          </p>
+          </div>
         </Section>
 
         <Section label="Watch out for">
-          <p className="bullet-md">
+          <div className="bullet-md">
             <InlineMarkdown>{review.gotcha}</InlineMarkdown>
-          </p>
+          </div>
         </Section>
       </div>
 
