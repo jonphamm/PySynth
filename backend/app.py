@@ -138,10 +138,11 @@ def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
             "today_chapter": today_row["chapter"],
             "today_concept": today_row["concept"],
         }
-    if req.intent == "review" and today_row:
+    if today_row and req.intent in ("advance", "review"):
         user_msg = start_user_message(
-            review_chapter=today_row["chapter"],
-            review_concept=today_row["concept"],
+            same_day_intent=req.intent,
+            same_day_chapter=today_row["chapter"],
+            same_day_concept=today_row["concept"],
         )
     else:
         user_msg = start_user_message()

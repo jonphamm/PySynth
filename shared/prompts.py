@@ -12,27 +12,43 @@ def build_system_prompt() -> str:
 
 def start_user_message(
     *,
-    review_chapter: str | None = None,
-    review_concept: str | None = None,
+    same_day_intent: str | None = None,
+    same_day_chapter: str | None = None,
+    same_day_concept: str | None = None,
 ) -> str:
     """Prompt that asks for today's concept review + 4 quiz questions as JSON.
 
-    When `review_chapter` and `review_concept` are both supplied, prepend an
-    OVERRIDE block instructing the LLM to regenerate the same chapter/concept
-    with fresh examples and questions rather than advancing.
+    When the user has already completed today's session and explicitly chose
+    to either `review` the same chapter or `advance` past it, prepend an
+    OVERRIDE block that contradicts the recipe's "stop and ask" rule and
+    tells the LLM exactly what to do.
     """
     override = ""
-    if review_chapter and review_concept:
-        override = (
-            "OVERRIDE — same-day review request:\n"
-            f'The user has already completed today\'s session on chapter "{review_chapter}" /\n'
-            f'concept "{review_concept}". They explicitly chose to REVIEW the same chapter from\n'
-            "a different angle. Generate the session for the SAME chapter AND the SAME\n"
-            "granular concept. Use a different worked_example_code, different syntax_forms\n"
-            "examples, and entirely new questions. Do NOT advance to a different chapter or\n"
-            "sub-concept.\n\n"
-            "---\n\n"
-        )
+    if same_day_intent and same_day_chapter and same_day_concept:
+        if same_day_intent == "review":
+            override = (
+                "OVERRIDE — same-day review request:\n"
+                f'The user has already completed today\'s session on chapter "{same_day_chapter}" /\n'
+                f'concept "{same_day_concept}". They explicitly chose to REVIEW the same chapter from\n'
+                "a different angle. Generate the session for the SAME chapter AND the SAME\n"
+                "granular concept. Use a different worked_example_code, different syntax_forms\n"
+                "examples, and entirely new questions. Do NOT advance to a different chapter or\n"
+                "sub-concept.\n\n"
+                "---\n\n"
+            )
+        elif same_day_intent == "advance":
+            override = (
+                "OVERRIDE — same-day advance request:\n"
+                f'The user has already completed today\'s session on chapter "{same_day_chapter}" /\n'
+                f'concept "{same_day_concept}", but has explicitly chosen to ADVANCE past it and\n'
+                "start the NEXT chapter today (an extra session). Treat today's completed row\n"
+                "as part of the \"already covered\" history. Do NOT repeat that chapter or\n"
+                "concept. Pick the next uncovered chapter from the learning plan — typically\n"
+                "the chapter immediately after the one named above. The recipe's \"stop and\n"
+                "ask\" rule for same-day sessions has already been resolved by the user's choice;\n"
+                "proceed with generating the next chapter's session.\n\n"
+                "---\n\n"
+            )
     return override + (
         "Generate today's session content as a JSON object with EXACTLY this shape "
         "(no markdown, no extra commentary — just the JSON):\n\n"
