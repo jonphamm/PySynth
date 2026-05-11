@@ -139,9 +139,7 @@ def session_start(_: StartRequest = StartRequest()) -> dict[str, Any]:
 
 @app.post("/session/grade", response_model=GradeResponse)
 def session_grade(req: GradeRequest) -> GradeResponse:
-    user_msg = grade_user_message(
-        req.questions, req.answers, req.picked_indexes, json_wrapper=True
-    )
+    user_msg = grade_user_message(req.questions, req.answers, req.picked_indexes)
     try:
         data, _provider = call_llm_json(build_system_prompt(), user_msg)
     except Exception as exc:
@@ -183,7 +181,7 @@ def session_review(req: ReviewRequest) -> ReviewResponse:
     if not req.code.strip():
         raise _fail("code is empty", status=400)
     exercise_text = render_exercise_markdown(req.exercise)
-    user_msg = review_user_message(exercise_text, req.code, json_wrapper=True)
+    user_msg = review_user_message(exercise_text, req.code)
     try:
         data, _provider = call_llm_json(build_system_prompt(), user_msg)
     except Exception as exc:

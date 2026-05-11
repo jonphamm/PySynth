@@ -81,15 +81,9 @@ def grade_user_message(
     questions: list[dict],
     answers: list[str],
     picked_indexes: list[int | None],
-    *,
-    json_wrapper: bool = False,
 ) -> str:
-    """Prompt that grades the 4 quiz answers.
-
-    With `json_wrapper=True` the response is a JSON object
-    `{"grade_markdown": "...", "score_correct": int, "score_total": int}`
-    that `call_llm_json` can parse. The markdown-only mode (`False`) is
-    legacy from the Streamlit prototype and currently unused.
+    """Prompt that grades the 4 quiz answers. Returns a JSON-wrapped response
+    `{"grade_markdown": "...", "score_correct": int, "score_total": int}`.
     """
     padded = list(answers) + [""] * (4 - len(answers))
     padded = padded[:4]
@@ -108,12 +102,6 @@ def grade_user_message(
         qa_lines.append(f"User answer: {user_pick}")
         qa_lines.append("")
 
-    body = (
-        "Grade the user's quiz answers per the recipe.\n\n"
-        "Quiz + answers:\n"
-        f"{chr(10).join(qa_lines)}\n"
-        "---\n\n"
-    )
     markdown_format = (
         "Use this EXACT format with bolded labels:\n\n"
         "**Summary:** [overall score, e.g. '3.5 / 4'] — [1-line takeaway]\n\n"
@@ -123,10 +111,11 @@ def grade_user_message(
         "**Q4 (stretch) — ✓/partial/✗:** [explain THOROUGHLY — that's where real learning lives]\n\n"
         "Encourage idiomatic improvement; don't be harsh. Total response under 350 words."
     )
-    if not json_wrapper:
-        return body + markdown_format
-
-    return body + (
+    return (
+        "Grade the user's quiz answers per the recipe.\n\n"
+        "Quiz + answers:\n"
+        f"{chr(10).join(qa_lines)}\n"
+        "---\n\n"
         "Return a JSON object with EXACTLY this shape (no extra commentary):\n\n"
         "{\n"
         '  "grade_markdown": "<the full graded response, formatted as markdown — see format below>",\n'
@@ -138,7 +127,7 @@ def grade_user_message(
     )
 
 
-def exercise_user_message(angle: str, *, json_wrapper: bool = True) -> str:
+def exercise_user_message(angle: str) -> str:
     """Prompt that produces the coding exercise + apply-at-work paragraph (JSON mode)."""
     return (
         "Generate the coding exercise and apply-at-work as a JSON object with EXACTLY this shape "
@@ -166,18 +155,11 @@ def exercise_user_message(angle: str, *, json_wrapper: bool = True) -> str:
     )
 
 
-def review_user_message(exercise_text: str, code: str, *, json_wrapper: bool = False) -> str:
-    """Prompt that reviews the user's submitted code.
-
-    With `json_wrapper=True` the markdown is wrapped in
-    `{"review_markdown": "...", "verdict": "pass"|"close"|"miss"}`. The
-    markdown-only mode (`False`) is legacy from the Streamlit prototype.
+def review_user_message(exercise_text: str, code: str) -> str:
+    """Prompt that reviews the user's submitted code. Returns a JSON-wrapped
+    response `{"review_markdown": "...", "verdict": "pass"|"close"|"miss",
+    "reference_solution": "..."}`.
     """
-    body = (
-        f"Exercise was:\n\n{exercise_text}\n\n"
-        f"---\n\nUser's solution:\n```python\n{code}\n```\n\n"
-        f"---\n\nReview per the recipe. "
-    )
     markdown_format = (
         "Use this EXACT format with bolded labels:\n\n"
         "**Verdict:** ✓ pass / partial / needs fix\n\n"
@@ -186,10 +168,11 @@ def review_user_message(exercise_text: str, code: str, *, json_wrapper: bool = F
         "**Pattern check:** [if you spot a recurring pattern from past sessions like 'what' comments instead of 'why', flag it; otherwise '—']\n\n"
         "Don't be harsh; encourage idiomatic improvement. Keep response under 250 words."
     )
-    if not json_wrapper:
-        return body + markdown_format
-
-    return body + (
+    return (
+        f"Exercise was:\n\n{exercise_text}\n\n"
+        f"---\n\nUser's solution:\n```python\n{code}\n```\n\n"
+        f"---\n\nReview per the recipe. "
+    ) + (
         "Return a JSON object with EXACTLY this shape (no extra commentary):\n\n"
         "{\n"
         '  "review_markdown": "<the full review formatted as markdown — see format below>",\n'
