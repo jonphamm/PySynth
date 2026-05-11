@@ -124,6 +124,14 @@ def _safe_score(value: Any, fallback: float = 0.0) -> float:
         return fallback
 
 
+# In-memory cache for today's /session/start responses. Keyed by
+# (date, intent, pin_to_chapter) so a refresh on the same calendar day with
+# the same arguments serves the cached session instead of burning an LLM
+# call. Date in the key implicitly expires entries at midnight. Restart the
+# backend to clear.
+_session_cache: dict[tuple[str, str | None, str | None], dict[str, Any]] = {}
+
+
 # ---------------- Endpoints ----------------
 
 @app.get("/health")
@@ -156,11 +164,19 @@ def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
             )
         else:
             user_msg = start_user_message()
+
+    cache_key = (date.today().isoformat(), req.intent, req.pin_to_chapter)
+    cached = _session_cache.get(cache_key)
+    if cached is not None:
+        return {"kind": "session", **cached}
+
     try:
         data, _provider = call_llm_json(build_system_prompt(), user_msg)
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
-    return {"kind": "session", **validate_session_data(data)}
+    validated = validate_session_data(data)
+    _session_cache[cache_key] = validated
+    return {"kind": "session", **validated}
 
 
 @app.post("/session/grade", response_model=GradeResponse)
