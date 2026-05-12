@@ -7,3 +7,6 @@ cerebras-cloud-sdk>=1.5
 openai>=1.40
 json-repair>=0.30
 python-dotenv>=1.0
+sqlalchemy[asyncio]>=2.0
+asyncpg>=0.29
+alembic>=1.13
