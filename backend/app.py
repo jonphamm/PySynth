@@ -13,12 +13,14 @@ from datetime import date
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db import DEV_USER_ID, get_session
+from backend.db import User, get_session
 from shared.llm import call_llm, call_llm_json
 from shared.progress import (
     find_today_daily_row,
@@ -52,10 +54,28 @@ app.add_middleware(
 )
 
 
-# Phase 6a: every endpoint resolves to the dev user. Phase 6b replaces this
-# with a header-driven dependency that returns a per-browser UUID.
-async def get_user_id() -> UUID:
-    return DEV_USER_ID
+# Phase 6b: each browser sends a UUID it minted in localStorage. We validate
+# the header, upsert the User row (creating it on first sight, bumping
+# last_seen_at on returning visits), and hand the UUID to the endpoint.
+async def get_user_id(
+    x_user_id: str = Header(..., alias="X-User-Id"),
+    db: AsyncSession = Depends(get_session),
+) -> UUID:
+    try:
+        uid = UUID(x_user_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid X-User-Id header")
+    stmt = (
+        insert(User)
+        .values(id=uid)
+        .on_conflict_do_update(
+            index_elements=["id"],
+            set_={"last_seen_at": func.now()},
+        )
+    )
+    await db.execute(stmt)
+    await db.commit()
+    return uid
 
 
 # ---------------- Pydantic models ----------------
@@ -175,11 +195,11 @@ def _looks_degraded(data: dict[str, Any]) -> str | None:
 
 
 # In-memory cache for today's /session/start responses. Keyed by
-# (date, intent, pin_to_chapter) so a refresh on the same calendar day with
-# the same arguments serves the cached session instead of burning an LLM
-# call. Date in the key implicitly expires entries at midnight. Restart the
-# backend to clear. Phase 6b will fold user_id into the key.
-_session_cache: dict[tuple[str, str | None, str | None], dict[str, Any]] = {}
+# (user_id, date, intent, pin_to_chapter) so a refresh on the same calendar
+# day with the same arguments serves the cached session instead of burning
+# an LLM call. Date in the key implicitly expires entries at midnight.
+# Restart the backend to clear.
+_session_cache: dict[tuple[str, str, str | None, str | None], dict[str, Any]] = {}
 
 
 # ---------------- Endpoints ----------------
@@ -222,7 +242,7 @@ async def session_start(
         else:
             user_msg = start_user_message()
 
-    cache_key = (date.today().isoformat(), req.intent, req.pin_to_chapter)
+    cache_key = (str(user_id), date.today().isoformat(), req.intent, req.pin_to_chapter)
     cached = _session_cache.get(cache_key)
     if cached is not None:
         return {"kind": "session", **cached}

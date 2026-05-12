@@ -12,6 +12,7 @@ import type {
   Exercise,
   Question,
 } from "@/types/session";
+import { getOrCreateUserId } from "./userId";
 
 const BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -28,9 +29,12 @@ async function request<T>(
   path: string,
   init: RequestInit,
 ): Promise<T> {
+  const userId = getOrCreateUserId();
+  const headers = new Headers(init.headers);
+  if (userId) headers.set("X-User-Id", userId);
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, init);
+    res = await fetch(`${BASE}${path}`, { ...init, headers });
   } catch (err) {
     throw new ApiError(0, `Cannot reach backend at ${BASE} — is it running?`);
   }
