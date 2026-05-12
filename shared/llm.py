@@ -14,9 +14,10 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 # next one. Daily-quota exhaustion is excluded on purpose — retrying won't help
 # until the day rolls over.
 _TRANSIENT_ERROR_HINTS = (
-    "queue_exceeded",        # Cerebras: shared capacity is saturated
-    "tokens per minute",     # Groq: per-minute token rate limit (TPM)
-    "requests per minute",   # Groq: per-minute request rate limit (RPM)
+    "queue_exceeded",          # Cerebras: shared capacity is saturated
+    "tokens per minute",       # Groq: per-minute token rate limit (TPM)
+    "requests per minute",     # Groq: per-minute request rate limit (RPM)
+    "rate-limited upstream",   # OpenRouter: free model throttled at the provider level
 )
 
 
