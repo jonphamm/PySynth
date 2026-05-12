@@ -1,0 +1,15 @@
+frontend/
+node_modules/
+.next/
+.git/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+Output/
+.claude/
+*.md
+!Workflows/*.md
+!Resources/*.md

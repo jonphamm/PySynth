@@ -9,6 +9,7 @@ Run (from `C:\\dev\\pysynth`):
     uvicorn backend.app:app --reload --port 8000
 """
 
+import os
 from datetime import date
 from typing import Any, Literal
 from uuid import UUID
@@ -45,9 +46,15 @@ from shared.validators import (
 
 app = FastAPI(title="PySynth Backend", version="0.1.0")
 
+_allowed_origins = [
+    o.strip()
+    for o in os.environ.get("ALLOWED_ORIGIN", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
