@@ -123,6 +123,7 @@ def start_user_message(
         "  ]\n"
         "}\n\n"
         "Rules:\n"
+        "- Write the chapter cell exactly as \"Part X / Chapter Y — Title\" — always spell out \"Chapter\", never abbreviate to \"Ch\".\n"
         "- The concept_review must be substantive enough that the user can answer all 4 questions and write the coding exercise from it alone. Aim for ~450–700 words across all review fields combined.\n"
         "- `how_it_works`, `syntax_forms`, `worked_example_walkthrough`, and `common_patterns` are REQUIRED arrays — never null, never strings.\n"
         "- `syntax_forms` typically has 2–4 entries showing the different ways the concept can appear in code.\n"
