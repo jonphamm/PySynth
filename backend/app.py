@@ -1,7 +1,8 @@
 """FastAPI backend serving the PySynth Next.js frontend.
 
-Reuses everything in `shared/` (chapters, prompts, LLM fan-out, progress
-log IO) so tutoring logic lives in exactly one place.
+Phase 6a: all user data lives in Postgres via SQLAlchemy (see `backend/db.py`
+and `shared/progress.py`). The static recipe + learning plan files are still
+read from disk by `shared/prompts.py`.
 
 Run (from `C:\\dev\\pysynth`):
     pip install -r backend/requirements.txt
@@ -9,21 +10,21 @@ Run (from `C:\\dev\\pysynth`):
 """
 
 from datetime import date
-from pathlib import Path
 from typing import Any, Literal
+from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.db import DEV_USER_ID, get_session
 from shared.llm import call_llm, call_llm_json
 from shared.progress import (
-    append_progress_row,
-    append_solution,
     find_today_daily_row,
     list_done_chapters,
+    log_session,
     pick_next_angle,
-    write_exercise_file,
 )
 from shared.prompts import (
     ask_user_message,
@@ -49,6 +50,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Phase 6a: every endpoint resolves to the dev user. Phase 6b replaces this
+# with a header-driven dependency that returns a per-browser UUID.
+async def get_user_id() -> UUID:
+    return DEV_USER_ID
 
 
 # ---------------- Pydantic models ----------------
@@ -126,8 +133,8 @@ class LogRequest(BaseModel):
 
 class LogResponse(BaseModel):
     ok: bool
-    exercise_path: str
-    progress_path: str
+    session_id: UUID
+    exercise_id: UUID
 
 
 # ---------------- Helpers ----------------
@@ -171,7 +178,7 @@ def _looks_degraded(data: dict[str, Any]) -> str | None:
 # (date, intent, pin_to_chapter) so a refresh on the same calendar day with
 # the same arguments serves the cached session instead of burning an LLM
 # call. Date in the key implicitly expires entries at midnight. Restart the
-# backend to clear.
+# backend to clear. Phase 6b will fold user_id into the key.
 _session_cache: dict[tuple[str, str | None, str | None], dict[str, Any]] = {}
 
 
@@ -183,16 +190,23 @@ def health() -> dict[str, str]:
 
 
 @app.get("/chapters/done")
-def chapters_done() -> dict[str, Any]:
-    return {"chapters": list_done_chapters()}
+async def chapters_done(
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    return {"chapters": await list_done_chapters(user_id, db)}
 
 
 @app.post("/session/start")
-def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
+async def session_start(
+    req: StartRequest = StartRequest(),
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
     if req.pin_to_chapter:
         user_msg = start_user_message(pin_chapter=req.pin_to_chapter)
     else:
-        today_row = find_today_daily_row()
+        today_row = await find_today_daily_row(user_id, db)
         if today_row and req.intent is None:
             return {
                 "kind": "needs_intent",
@@ -214,7 +228,8 @@ def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
         return {"kind": "session", **cached}
 
     try:
-        data, _provider = call_llm_json(build_system_prompt(), user_msg)
+        sys_prompt = await build_system_prompt(user_id, db)
+        data, _provider = call_llm_json(sys_prompt, user_msg)
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
     validated = validate_session_data(data)
@@ -226,10 +241,15 @@ def session_start(req: StartRequest = StartRequest()) -> dict[str, Any]:
 
 
 @app.post("/session/grade", response_model=GradeResponse)
-def session_grade(req: GradeRequest) -> GradeResponse:
+async def session_grade(
+    req: GradeRequest,
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> GradeResponse:
     user_msg = grade_user_message(req.questions, req.answers, req.picked_indexes)
     try:
-        data, _provider = call_llm_json(build_system_prompt(), user_msg)
+        sys_prompt = await build_system_prompt(user_id, db)
+        data, _provider = call_llm_json(sys_prompt, user_msg)
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
 
@@ -246,11 +266,16 @@ def session_grade(req: GradeRequest) -> GradeResponse:
 
 
 @app.post("/session/exercise", response_model=ExerciseResponse)
-def session_exercise(req: ExerciseRequest) -> ExerciseResponse:
-    angle = pick_next_angle()
+async def session_exercise(
+    req: ExerciseRequest,
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> ExerciseResponse:
+    angle = await pick_next_angle(user_id, db)
     user_msg = exercise_user_message(angle)
     try:
-        data, _provider = call_llm_json(build_system_prompt(), user_msg)
+        sys_prompt = await build_system_prompt(user_id, db)
+        data, _provider = call_llm_json(sys_prompt, user_msg)
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
 
@@ -265,13 +290,18 @@ def session_exercise(req: ExerciseRequest) -> ExerciseResponse:
 
 
 @app.post("/session/review", response_model=ReviewResponse)
-def session_review(req: ReviewRequest) -> ReviewResponse:
+async def session_review(
+    req: ReviewRequest,
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> ReviewResponse:
     if not req.code.strip():
         raise _fail("code is empty", status=400)
     exercise_text = render_exercise_markdown(req.exercise)
     user_msg = review_user_message(exercise_text, req.code)
     try:
-        data, _provider = call_llm_json(build_system_prompt(), user_msg)
+        sys_prompt = await build_system_prompt(user_id, db)
+        data, _provider = call_llm_json(sys_prompt, user_msg)
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
 
@@ -290,7 +320,11 @@ def session_review(req: ReviewRequest) -> ReviewResponse:
 
 
 @app.post("/session/ask", response_model=AskResponse)
-def session_ask(req: AskRequest) -> AskResponse:
+async def session_ask(
+    req: AskRequest,
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> AskResponse:
     if not req.question.strip():
         raise _fail("question is empty", status=400)
     user_msg = ask_user_message(
@@ -301,29 +335,36 @@ def session_ask(req: AskRequest) -> AskResponse:
         history=[t.model_dump() for t in req.history[-10:]],
     )
     try:
-        text, provider = call_llm(build_system_prompt(), user_msg)
+        sys_prompt = await build_system_prompt(user_id, db)
+        text, provider = call_llm(sys_prompt, user_msg)
     except Exception as exc:
         raise _fail(f"LLM call failed: {exc}") from exc
     return AskResponse(answer=text.strip(), provider=provider)
 
 
 @app.post("/session/log", response_model=LogResponse)
-def session_log(req: LogRequest) -> LogResponse:
-    today_str = date.today().isoformat()
-
-    exercise_path = write_exercise_file(today_str, req.exercise_text or "(no exercise text)")
-    if req.code.strip():
-        append_solution(exercise_path, req.code)
-
-    apply_summary = req.apply_summary[:120] if req.apply_summary else ""
-    row = (
-        f"| {today_str} | {req.type} | {req.chapter or '?'} | {req.topic or '?'} | "
-        f"{req.quiz_score or '—'} | {req.exercise_verdict or 'pass'} | "
-        f"{apply_summary} (Angle {req.angle}) | {req.feeling} |\n"
+async def session_log(
+    req: LogRequest,
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> LogResponse:
+    result = await log_session(
+        user_id,
+        db,
+        date_=date.today(),
+        type_=req.type,
+        chapter=req.chapter or "?",
+        concept=req.topic or "?",
+        quiz_score=req.quiz_score or "—",
+        exercise_verdict=req.exercise_verdict or "pass",
+        apply_summary=req.apply_summary,
+        angle=req.angle,
+        feeling=req.feeling,
+        exercise_text=req.exercise_text or "(no exercise text)",
+        code=req.code,
     )
-    progress_dest = append_progress_row(row)
     return LogResponse(
         ok=True,
-        exercise_path=str(exercise_path),
-        progress_path=str(progress_dest),
+        session_id=result["session_id"],
+        exercise_id=result["exercise_id"],
     )

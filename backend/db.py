@@ -22,6 +22,11 @@ from sqlalchemy.sql import func
 from shared.config import DATABASE_URL
 
 
+# Phase 6a: a single hardcoded user ID for local dev and legacy data import.
+# Phase 6b replaces all references with the X-User-Id header from the browser.
+DEV_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
 class Base(DeclarativeBase):
     pass
 

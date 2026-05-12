@@ -108,8 +108,8 @@ export type ReviewResult = {
 /** Returned by POST /session/log. */
 export type LogResult = {
   ok: boolean;
-  exercise_path: string;
-  progress_path: string;
+  session_id: string;
+  exercise_id: string;
 };
 
 /** Loading / error UI state. */

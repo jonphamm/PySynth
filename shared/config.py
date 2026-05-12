@@ -10,9 +10,6 @@ load_dotenv()
 WORKSPACE = Path(__file__).resolve().parent.parent
 RECIPE_PATH = WORKSPACE / "Workflows" / "python-tutor-daily.md"
 PLAN_PATH = WORKSPACE / "Resources" / "python-learning-plan.md"
-EXERCISES_DIR = WORKSPACE / "Output" / "exercises"
-
-CANONICAL_PROGRESS_PATH = WORKSPACE / "Output" / "progress.md"
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GROQ_MODEL = "llama-3.3-70b-versatile"

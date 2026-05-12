@@ -1,10 +1,22 @@
-"""Progress log + exercise file IO. Angle rotation logic."""
+"""Progress + exercise persistence. Async SQLAlchemy against Postgres.
+
+Phase 6a port of the former filesystem implementation. Every function reads
+or writes rows scoped by `user_id`. The static learning plan still lives on
+disk (`PLAN_PATH`) — only user-generated data moved to the DB."""
+
+from __future__ import annotations
 
 import re
-from datetime import date
-from pathlib import Path
+from datetime import date as Date
+from uuid import UUID
 
-from .config import EXERCISES_DIR, CANONICAL_PROGRESS_PATH, load_text
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.db import Exercise, Session as SessionRow
+
+from .config import PLAN_PATH, load_text
+
 
 ANGLES = {
     "A": "Sysadmin / day job (email-marketing ops, AD, log parsing, CSV diffs, vendor APIs)",
@@ -13,101 +25,144 @@ ANGLES = {
 }
 
 
-def _daily_rows(text: str) -> list[str]:
-    rows = [line for line in text.splitlines() if line.startswith("| 2026-")]
-    return [r for r in rows if "Daily" in r.split("|")[2]]
+def _chapter_sort_key(chapter: str) -> tuple[int, int]:
+    """Sort chapters numerically by (part, chapter). Tolerates 'Ch' or 'Chapter'."""
+    m = re.search(r"Part\s+(\d+)\s*/\s*Ch(?:apter)?\s+(\d+)", chapter, re.IGNORECASE)
+    return (int(m.group(1)), int(m.group(2))) if m else (99, 99)
 
 
-def pick_next_angle() -> str:
-    """Pick A/B/C based on the last 3 Daily rows in the progress log."""
-    text = load_text(CANONICAL_PROGRESS_PATH)
-    last_3 = _daily_rows(text)[-3:]
-    used = []
-    for row in last_3:
-        m = re.search(r"\(Angle\s+([ABC])\)", row, re.IGNORECASE)
-        if m:
-            used.append(m.group(1).upper())
-    for candidate in ["A", "B", "C"]:
+def _format_row(s: SessionRow) -> str:
+    """Render a session as the pipe-delimited markdown row the LLM is used to seeing.
+
+    The prompt context (get_current_position) has historically embedded recent
+    rows in this exact shape, and several prompts in `shared/prompts.py` reason
+    about Daily / Daily (extra) row prefixes. Keep the format stable so the LLM
+    behavior doesn't shift."""
+    angle_suffix = f" (Angle {s.angle})" if s.angle else ""
+    return (
+        f"| {s.date.isoformat()} | {s.type} | {s.chapter} | {s.concept} | "
+        f"{s.quiz_score} | {s.exercise_verdict} | "
+        f"{s.apply_summary}{angle_suffix} | {s.feeling} |"
+    )
+
+
+async def pick_next_angle(user_id: UUID, db: AsyncSession) -> str:
+    """Pick A/B/C based on the user's last 3 Daily / Daily (extra) sessions.
+
+    Reads the `angle` column directly — much cleaner than the old regex-extract
+    from apply_summary. Returns the first letter not in the recent set, or
+    falls back to the *least* recently used letter (oldest in the window) if
+    all three appeared."""
+    stmt = (
+        select(SessionRow.angle)
+        .where(SessionRow.user_id == user_id, SessionRow.type.like("Daily%"))
+        .order_by(desc(SessionRow.date), desc(SessionRow.created_at))
+        .limit(3)
+    )
+    result = await db.execute(stmt)
+    used = [row[0].upper() for row in result if row[0]]  # newest -> oldest
+    for candidate in ("A", "B", "C"):
         if candidate not in used:
             return candidate
-    return used[0] if used else "A"
+    return used[-1] if used else "A"  # oldest of the last 3 = least recently used
 
 
-def list_done_chapters() -> list[dict]:
-    """Return distinct chapters from Daily / Daily (extra) rows in progress.md,
-    sorted by (part, chapter) numerically. Each entry: {chapter, last_date}."""
-    text = load_text(CANONICAL_PROGRESS_PATH)
-    seen: dict[str, str] = {}
-    for line in text.splitlines():
-        if not line.startswith("| 2026-"):
-            continue
-        cells = [c.strip() for c in line.split("|")]
-        if len(cells) < 5 or "Daily" not in cells[2]:
-            continue
-        chapter, date_str = cells[3], cells[1]
-        if chapter and (chapter not in seen or date_str > seen[chapter]):
-            seen[chapter] = date_str
-
-    def sort_key(chapter: str) -> tuple[int, int]:
-        m = re.search(r"Part\s+(\d+)\s*/\s*Ch(?:apter)?\s+(\d+)", chapter, re.IGNORECASE)
-        return (int(m.group(1)), int(m.group(2))) if m else (99, 99)
-
-    return [
-        {"chapter": c, "last_date": d}
-        for c, d in sorted(seen.items(), key=lambda kv: sort_key(kv[0]))
+async def list_done_chapters(user_id: UUID, db: AsyncSession) -> list[dict]:
+    """Return distinct chapters the user has done a Daily / Daily (extra) on,
+    sorted by (part, chapter). Each entry: {chapter, last_date}."""
+    stmt = (
+        select(SessionRow.chapter, func.max(SessionRow.date).label("last_date"))
+        .where(SessionRow.user_id == user_id, SessionRow.type.like("Daily%"))
+        .group_by(SessionRow.chapter)
+    )
+    result = await db.execute(stmt)
+    rows = [
+        {"chapter": chapter, "last_date": last_date.isoformat()}
+        for chapter, last_date in result
+        if chapter
     ]
+    return sorted(rows, key=lambda r: _chapter_sort_key(r["chapter"]))
 
 
-def find_today_daily_row() -> dict | None:
+async def find_today_daily_row(user_id: UUID, db: AsyncSession) -> dict | None:
     """Return `{'chapter': str, 'concept': str}` if today already has a Daily
-    row in the canonical progress log, else None. Scans newest-first."""
-    text = load_text(CANONICAL_PROGRESS_PATH)
-    today = date.today().isoformat()
-    prefix = f"| {today} "
-    for line in reversed(text.splitlines()):
-        if not line.startswith(prefix):
-            continue
-        cells = [c.strip() for c in line.split("|")]
-        # cells[0] is the leading-empty pre-pipe slot. Real cells start at [1].
-        # Row shape: '', date, type, chapter, topic, quiz, exercise, work_apply, note, ''
-        if len(cells) < 5 or "Daily" not in cells[2]:
-            continue
-        return {"chapter": cells[3], "concept": cells[4]}
-    return None
+    row for this user, else None. Picks the most recent if multiple."""
+    stmt = (
+        select(SessionRow.chapter, SessionRow.concept)
+        .where(
+            SessionRow.user_id == user_id,
+            SessionRow.date == Date.today(),
+            SessionRow.type.like("Daily%"),
+        )
+        .order_by(desc(SessionRow.created_at))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    row = result.first()
+    if row is None:
+        return None
+    return {"chapter": row[0], "concept": row[1]}
 
 
-def get_current_position() -> str:
-    """Snapshot of recent sessions + learning plan, embedded in the system prompt."""
-    from .config import PLAN_PATH
+async def get_current_position(user_id: UUID, db: AsyncSession) -> str:
+    """Snapshot of recent sessions + learning plan, embedded in the system prompt.
 
-    progress = load_text(CANONICAL_PROGRESS_PATH)
+    Returns the last 5 sessions formatted as pipe-delimited rows (same shape
+    as the historical `Output/progress.md` table) followed by the full static
+    learning plan text from disk."""
+    stmt = (
+        select(SessionRow)
+        .where(SessionRow.user_id == user_id)
+        .order_by(desc(SessionRow.date), desc(SessionRow.created_at))
+        .limit(5)
+    )
+    result = await db.execute(stmt)
+    recent = list(result.scalars())
+    recent.reverse()  # oldest-first in the rendered context, matching the old log
+    last_rows = "\n".join(_format_row(s) for s in recent) if recent else "(no sessions yet)"
     plan = load_text(PLAN_PATH)
-    rows = [line for line in progress.splitlines() if line.startswith("| 2026-")]
-    last_rows = "\n".join(rows[-5:]) if rows else "(no sessions yet)"
     return f"Recent sessions (last 5):\n{last_rows}\n\nLearning plan:\n{plan}"
 
 
-def write_exercise_file(date_str: str, exercise_text: str) -> Path:
-    EXERCISES_DIR.mkdir(parents=True, exist_ok=True)
-    path = EXERCISES_DIR / f"{date_str}.py"
-    safe_text = exercise_text.replace('"""', "'''")
-    content = (
-        f'"""\n{safe_text.strip()}\n"""\n\n'
-        f"# ---- your solution will be appended here after review ----\n"
+async def log_session(
+    user_id: UUID,
+    db: AsyncSession,
+    *,
+    date_: Date,
+    type_: str,
+    chapter: str,
+    concept: str,
+    quiz_score: str,
+    exercise_verdict: str,
+    apply_summary: str,
+    angle: str,
+    feeling: str,
+    exercise_text: str,
+    code: str,
+) -> dict[str, UUID]:
+    """Insert one Session row and its matching Exercise row in a single
+    transaction. Returns the new IDs for the response."""
+    session_row = SessionRow(
+        user_id=user_id,
+        date=date_,
+        type=type_,
+        chapter=chapter,
+        concept=concept,
+        quiz_score=quiz_score,
+        exercise_verdict=exercise_verdict,
+        apply_summary=apply_summary,
+        angle=angle,
+        feeling=feeling,
     )
-    path.write_text(content, encoding="utf-8")
-    return path
+    db.add(session_row)
+    await db.flush()  # populates session_row.id without committing
 
+    exercise_row = Exercise(
+        session_id=session_row.id,
+        exercise_text=exercise_text,
+        code=code,
+    )
+    db.add(exercise_row)
+    await db.commit()
 
-def append_solution(path: Path, code: str) -> None:
-    with path.open("a", encoding="utf-8") as f:
-        f.write(f"\n{code}\n")
-
-
-def append_progress_row(row: str, *, target: Path | None = None) -> Path:
-    """Append a row to the progress log. Tests may override `target`."""
-    dest = target if target is not None else CANONICAL_PROGRESS_PATH
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with dest.open("a", encoding="utf-8") as f:
-        f.write(row)
-    return dest
+    return {"session_id": session_row.id, "exercise_id": exercise_row.id}

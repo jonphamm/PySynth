@@ -1,12 +1,16 @@
 """System prompt + user-message builders used by the FastAPI backend."""
 
+from uuid import UUID
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from .config import RECIPE_PATH, load_text
 from .progress import ANGLES, get_current_position
 
 
-def build_system_prompt() -> str:
+async def build_system_prompt(user_id: UUID, db: AsyncSession) -> str:
     recipe = load_text(RECIPE_PATH)
-    state = get_current_position()
+    state = await get_current_position(user_id, db)
     return f"{recipe}\n\n---\n\n# Current state — read this before generating today's session\n\n{state}\n"
 
 
