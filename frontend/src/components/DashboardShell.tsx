@@ -31,6 +31,7 @@ export function DashboardShell() {
   const [pendingSwitch, setPendingSwitch] = useState<string | null>(null);
   const [doneChapters, setDoneChapters] = useState<DoneChapter[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mentorOpen, setMentorOpen] = useState(false);
   const progress = (index + 1) / wizardOrder.length;
 
   const refreshDoneChapters = useCallback(() => {
@@ -87,6 +88,7 @@ export function DashboardShell() {
               concept="MOOC.fi 2026 · Daily"
               xp={120}
               onMenuClick={() => setMobileMenuOpen(true)}
+              onMentorClick={() => setMentorOpen(true)}
             />
           </div>
           <div className="glass hidden h-14 items-center gap-3 px-4 sm:flex">
@@ -123,6 +125,8 @@ export function DashboardShell() {
             chapter={sessionData?.topic.chapter ?? ""}
             concept={sessionData?.topic.concept ?? ""}
             stage={stage}
+            mobileOpen={mentorOpen}
+            onMobileClose={() => setMentorOpen(false)}
           />
         </div>
 

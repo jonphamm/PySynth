@@ -70,6 +70,26 @@ export function Sidebar({
           mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-[120%]"
         } md:translate-x-0`}
       >
+      <button
+        type="button"
+        onClick={onMobileClose}
+        className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-white/10 md:hidden"
+        aria-label="Close navigation"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          style={{ color: "#cdeefd" }}
+        >
+          <line x1="4" y1="4" x2="12" y2="12" />
+          <line x1="12" y1="4" x2="4" y2="12" />
+        </svg>
+      </button>
       <div className="mb-6">
         <div
           className="font-mono text-[10px] uppercase tracking-[0.4em]"

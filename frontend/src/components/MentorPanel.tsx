@@ -12,6 +12,8 @@ type MentorPanelProps = {
   chapter: string;
   concept: string;
   stage: WizardStage;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 };
 
 type ChatStatus = "idle" | "thinking" | "error";
@@ -45,7 +47,13 @@ const MARKDOWN_COMPONENTS = {
   },
 };
 
-export function MentorPanel({ chapter, concept, stage }: MentorPanelProps) {
+export function MentorPanel({
+  chapter,
+  concept,
+  stage,
+  mobileOpen,
+  onMobileClose,
+}: MentorPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<ChatStatus>("idle");
@@ -110,8 +118,40 @@ export function MentorPanel({ chapter, concept, stage }: MentorPanelProps) {
   const orbState = status === "thinking" ? "thinking" : "idle";
 
   return (
-    <aside className="glass hidden h-full min-h-0 w-[340px] flex-col overflow-hidden p-5 lg:flex">
-      <div className="mb-4 flex items-center gap-3">
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={onMobileClose}
+          aria-hidden
+        />
+      )}
+      <aside
+        className={`glass relative flex h-full min-h-0 w-[340px] flex-col overflow-hidden p-5 transition-transform duration-300 ease-out max-lg:fixed max-lg:inset-y-2 max-lg:right-2 max-lg:z-50 max-lg:h-[calc(100%-1rem)] max-md:w-[calc(100%-1rem)] md:max-lg:w-[420px] ${
+          mobileOpen ? "max-lg:translate-x-0" : "max-lg:translate-x-[120%]"
+        } lg:translate-x-0`}
+      >
+        <button
+          type="button"
+          onClick={onMobileClose}
+          className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-white/10 lg:hidden"
+          aria-label="Close mentor chat"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            style={{ color: "#cdeefd" }}
+          >
+            <line x1="4" y1="4" x2="12" y2="12" />
+            <line x1="12" y1="4" x2="4" y2="12" />
+          </svg>
+        </button>
+        <div className="mb-4 flex items-center gap-3">
         <AIOrb state={orbState} size={42} />
         <div>
           <div
@@ -233,6 +273,7 @@ export function MentorPanel({ chapter, concept, stage }: MentorPanelProps) {
           }}
         />
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
