@@ -111,7 +111,17 @@ def get_engine() -> AsyncEngine:
                 "DATABASE_URL is not set. Add it to .env (copy from .env.example) "
                 "or set it in the hosting environment."
             )
-        _engine = create_async_engine(DATABASE_URL, future=True)
+        # pool_pre_ping issues a cheap SELECT 1 before each checkout so we don't
+        # hand out a connection Neon's pooler has already closed; pool_recycle
+        # proactively rotates connections before Neon's idle timeout fires.
+        # Without these, the free-tier deploy errors with "connection is closed"
+        # on the first request after any idle period.
+        _engine = create_async_engine(
+            DATABASE_URL,
+            future=True,
+            pool_pre_ping=True,
+            pool_recycle=300,
+        )
         _sessionmaker = async_sessionmaker(
             _engine, class_=AsyncSession, expire_on_commit=False
         )
