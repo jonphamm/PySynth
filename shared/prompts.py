@@ -68,6 +68,23 @@ def start_user_message(
                 "proceed with generating the next chapter's session.\n\n"
                 "---\n\n"
             )
+    else:
+        override = (
+            "DEFAULT MODE — daily advance:\n"
+            "The user is starting today's session with no explicit review choice.\n"
+            "Pick the NEXT uncovered chapter from the learning plan — the chapter\n"
+            "after the most recent Daily / Daily (extra) row in progress.md. Do NOT\n"
+            "repeat the most recent chapter, even if its quiz score was low or its\n"
+            "exercise verdict was 'needs fix' or 'close'. A single weak session does\n"
+            "not trigger an auto-review day. The recipe's \"interleave a review day\n"
+            "for weakness every 3-4 sessions\" rule is paused here -- review days are\n"
+            "user-initiated only:\n"
+            "  - same-day re-runs come through the SameDayModal (different override),\n"
+            "  - past-chapter revisits come through the past-chapters sidebar pin.\n"
+            "Treat the user as having completed the most recent chapter regardless of\n"
+            "its score, and advance one chapter further in the learning plan.\n\n"
+            "---\n\n"
+        )
     return override + (
         "Generate today's session content as a JSON object with EXACTLY this shape "
         "(no markdown, no extra commentary — just the JSON):\n\n"
