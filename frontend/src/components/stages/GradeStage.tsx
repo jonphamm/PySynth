@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Language } from "prism-react-renderer";
 import type { Wizard } from "@/hooks/useWizard";
@@ -38,12 +39,15 @@ export function GradeStage({ wizard }: Props) {
     gradeResult,
     reviewResult,
     exerciseResult,
+    code,
     feeling,
     setFeeling,
     advance,
     status,
     setStatus,
   } = wizard;
+
+  const [compareOpen, setCompareOpen] = useState(false);
 
   if (!gradeResult || !reviewResult) {
     return (
@@ -113,15 +117,44 @@ export function GradeStage({ wizard }: Props) {
         </Section>
 
         {showReference && (
-          <Section label="Reference solution">
-            <p
-              className="mb-3 text-xs"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+          <Section label="Compare your code">
+            <button
+              type="button"
+              onClick={() => setCompareOpen((v) => !v)}
+              aria-expanded={compareOpen}
+              className="rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest transition-colors hover:bg-[rgba(0,245,255,0.12)]"
+              style={{
+                border: "1px solid rgba(0,245,255,0.35)",
+                color: "rgba(0,245,255,0.85)",
+                background: "rgba(0,245,255,0.05)",
+              }}
             >
-              One clean, idiomatic way to solve this exercise. Compare against
-              your submission to spot the gap.
-            </p>
-            <SyntaxHighlight code={reviewResult.reference_solution ?? ""} />
+              {compareOpen ? "Hide comparison ▾" : "Show comparison ▸"}
+            </button>
+            {compareOpen && (
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                <div>
+                  <div
+                    className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em]"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                  >
+                    Your code
+                  </div>
+                  <SyntaxHighlight code={code} />
+                </div>
+                <div>
+                  <div
+                    className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em]"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                  >
+                    Reference
+                  </div>
+                  <SyntaxHighlight
+                    code={reviewResult.reference_solution ?? ""}
+                  />
+                </div>
+              </div>
+            )}
           </Section>
         )}
 
