@@ -60,12 +60,14 @@ export function GradeStage({ wizard }: Props) {
     );
   }
 
+  // Badge scoped to "CODE" so it's read as "your code passed/needs work" —
+  // not as a verdict on the quiz score sitting right next to it.
   const verdictBadge =
     reviewResult.verdict === "pass"
-      ? { label: "PASS", color: "#22f5a3" }
+      ? { label: "CODE ✓", color: "#22f5a3" }
       : reviewResult.verdict === "close"
-        ? { label: "CLOSE", color: "#ffae42" }
-        : { label: "NEEDS FIX", color: "#ff5f57" };
+        ? { label: "CODE ~", color: "#ffae42" }
+        : { label: "CODE ✗", color: "#ff5f57" };
 
   const showReference =
     reviewResult.verdict !== "pass" && !!reviewResult.reference_solution?.trim();

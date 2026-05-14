@@ -1,5 +1,6 @@
 # Secrets
 .env
+.vapid_keys.local
 
 # Python
 __pycache__/

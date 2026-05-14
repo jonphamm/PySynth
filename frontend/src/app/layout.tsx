@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Fira_Code } from "next/font/google";
 import "./globals.css";
 
@@ -18,6 +18,28 @@ export const metadata: Metadata = {
   title: "PySynth — Python Tutor",
   description:
     "PySynth is a futuristic Python learning environment. Concept review, quiz, code, grade — guided.",
+  // apple-touch-icon is required for the "Add to Home Screen" install on iOS;
+  // without it, iOS uses a screenshot of the page as the icon.
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+  // Marks the page as a fullscreen PWA on iOS once installed to home screen.
+  // Status bar style "black-translucent" lets our dark theme bleed into the
+  // top status area.
+  appleWebApp: {
+    capable: true,
+    title: "PySynth",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#020203",
+  width: "device-width",
+  initialScale: 1,
+  // Lock zoom inside the PWA shell so it doesn't behave like a webpage.
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

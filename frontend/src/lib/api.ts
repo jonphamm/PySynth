@@ -130,4 +130,19 @@ export function askMentor(payload: AskPayload): Promise<AskResult> {
   return post<AskResult>("/session/ask", payload);
 }
 
+export type PushSubscribePayload = {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+};
+
+export function subscribePush(
+  payload: PushSubscribePayload
+): Promise<{ ok: boolean }> {
+  return post<{ ok: boolean }>("/push/subscribe", payload);
+}
+
+export function unsubscribePush(endpoint: string): Promise<{ ok: boolean }> {
+  return post<{ ok: boolean }>("/push/unsubscribe", { endpoint });
+}
+
 export { ApiError };

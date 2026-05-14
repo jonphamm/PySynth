@@ -3,6 +3,7 @@
 import { parseChapter } from "@/lib/topic";
 import { wizardOrder } from "@/lib/tokens";
 import type { DoneChapter, WizardStage } from "@/types/session";
+import { NotificationsToggle } from "./NotificationsToggle";
 
 const STAGE_META: Record<
   WizardStage,
@@ -234,6 +235,8 @@ export function Sidebar({
           </ul>
         </div>
       )}
+
+      <NotificationsToggle />
 
       <div className="mt-4 border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         <div className="font-mono text-[10px] uppercase tracking-[0.3em]" style={{ color: "#9aa0a6" }}>

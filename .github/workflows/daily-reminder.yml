@@ -1,0 +1,26 @@
+name: PySynth daily reminder
+
+# 00:00 UTC daily = 8pm EDT (summer) / 7pm EST (winter). The slight seasonal
+# drift is intentional for v1; multi-tz handling is a follow-up if Jon adds
+# users in other timezones.
+#
+# workflow_dispatch lets you trigger a run manually from the Actions tab,
+# which is how we verify pushes end-to-end without waiting for the cron.
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /push/send-daily
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body \
+            --max-time 90 \
+            --retry 2 --retry-delay 30 \
+            -X POST https://pysynth.onrender.com/push/send-daily \
+            -H "Authorization: Bearer ${CRON_SECRET}"

@@ -9,6 +9,7 @@ Run (from `C:\\dev\\pysynth`):
     uvicorn backend.app:app --reload --port 8000
 """
 
+import asyncio
 import os
 from datetime import date
 from typing import Any, Literal
@@ -17,11 +18,12 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import func
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db import User, get_session
+from backend.db import PushSubscription, Session as SessionRow, User, get_session
+from shared.push import PushConfigError, PushExpired, Subscription, send_push
 from shared.llm import call_llm, call_llm_json
 from shared.progress import (
     find_today_daily_row,
@@ -395,3 +397,125 @@ async def session_log(
         session_id=result["session_id"],
         exercise_id=result["exercise_id"],
     )
+
+
+# ---------------- Push notifications ----------------
+
+class PushKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscribeRequest(BaseModel):
+    endpoint: str
+    keys: PushKeys
+
+
+class PushUnsubscribeRequest(BaseModel):
+    endpoint: str
+
+
+async def require_cron_secret(
+    authorization: str = Header(..., alias="Authorization"),
+) -> None:
+    """Auth for the daily cron — separate from the X-User-Id browser flow."""
+    secret = os.environ.get("CRON_SECRET", "")
+    if not secret or authorization != f"Bearer {secret}":
+        raise HTTPException(status_code=401, detail="invalid cron auth")
+
+
+@app.post("/push/subscribe")
+async def push_subscribe(
+    req: PushSubscribeRequest,
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, bool]:
+    """Store (or refresh) this browser's push subscription for this user."""
+    stmt = (
+        insert(PushSubscription)
+        .values(
+            user_id=user_id,
+            endpoint=req.endpoint,
+            p256dh=req.keys.p256dh,
+            auth=req.keys.auth,
+        )
+        .on_conflict_do_update(
+            index_elements=["endpoint"],
+            set_={
+                "user_id": user_id,
+                "p256dh": req.keys.p256dh,
+                "auth": req.keys.auth,
+            },
+        )
+    )
+    await db.execute(stmt)
+    await db.commit()
+    return {"ok": True}
+
+
+@app.post("/push/unsubscribe")
+async def push_unsubscribe(
+    req: PushUnsubscribeRequest,
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, bool]:
+    await db.execute(
+        delete(PushSubscription).where(
+            PushSubscription.user_id == user_id,
+            PushSubscription.endpoint == req.endpoint,
+        )
+    )
+    await db.commit()
+    return {"ok": True}
+
+
+@app.post("/push/send-daily")
+async def push_send_daily(
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_cron_secret),
+) -> dict[str, int]:
+    """Cron entrypoint — push to every subscribed user who has NOT logged a
+    session today. Date check uses server-local (UTC) `date.today()`; late
+    ET-evening sessions can land on the next UTC date, which would cause a
+    spurious reminder the morning after. Acceptable for v1; see plan."""
+    today = date.today()
+    not_done_today = (
+        select(SessionRow.id)
+        .where(
+            SessionRow.user_id == PushSubscription.user_id,
+            SessionRow.date == today,
+        )
+        .exists()
+    )
+    stmt = select(PushSubscription).where(~not_done_today)
+    subs = (await db.execute(stmt)).scalars().all()
+
+    sent = 0
+    expired_ids: list[UUID] = []
+    for s in subs:
+        sub = Subscription(endpoint=s.endpoint, p256dh=s.p256dh, auth=s.auth)
+        try:
+            await asyncio.to_thread(
+                send_push,
+                sub,
+                "PySynth",
+                "Time for today's Python session.",
+                "/",
+            )
+            sent += 1
+        except PushExpired:
+            expired_ids.append(s.id)
+        except PushConfigError:
+            # Misconfiguration — fail the whole run so the cron logs it loudly
+            raise
+        except Exception:
+            # Don't let one flaky endpoint stop the others
+            pass
+
+    if expired_ids:
+        await db.execute(
+            delete(PushSubscription).where(PushSubscription.id.in_(expired_ids))
+        )
+        await db.commit()
+
+    return {"sent": sent, "expired_removed": len(expired_ids)}
