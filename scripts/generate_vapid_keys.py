@@ -23,7 +23,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT_FILE = REPO_ROOT / ".vapid_keys.local"
-SUBJECT_DEFAULT = "mailto:jon.pham@siteimpact.com"
+SUBJECT_DEFAULT = "mailto:jonpham09@gmail.com"
 
 
 def _b64url(data: bytes) -> str:
