@@ -6,6 +6,7 @@ import {
   disablePush,
   enablePush,
   getPermission,
+  isIOS,
   isPushSupported,
   isStandalone,
   isSubscribed,
@@ -24,12 +25,23 @@ export function NotificationsToggle() {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!isPushSupported()) {
+    // Scope to iOS only by design — Jon picked iPhone-only at planning time,
+    // and the "Add to Home Screen" prompt is only meaningful on iOS anyway.
+    // Desktop and non-iOS mobile users see nothing.
+    if (!isIOS()) {
       setState({ kind: "unsupported" });
       return;
     }
+    // iOS Safari tab doesn't expose Notification/PushManager — Apple gates the
+    // API behind PWA installation. So we can't probe isPushSupported() here;
+    // we know we're on iOS, so show the install prompt directly.
     if (!isStandalone()) {
       setState({ kind: "needs-pwa-install" });
+      return;
+    }
+    // Now we're inside the installed PWA — the full Push API should exist.
+    if (!isPushSupported()) {
+      setState({ kind: "unsupported" });
       return;
     }
     const permission = getPermission();

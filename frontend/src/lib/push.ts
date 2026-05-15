@@ -19,6 +19,13 @@ export function isPushSupported(): boolean {
   );
 }
 
+/** True for iPhone, iPad, iPod. Includes iPadOS 13+ which spoofs as Mac in UA. */
+export function isIOS(): boolean {
+  if (typeof window === "undefined") return false;
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   // iOS Safari sets navigator.standalone on home-screen PWAs.
