@@ -71,8 +71,8 @@ def _add_watermark(img: Image.Image) -> None:
     # inset moves it up (toward the snake). These two values are tuned
     # so the text lands fully inside the wedge without touching either
     # the snake or the iOS-mask clip zone.
-    pad_right = int(size * 0.25)
-    pad_bottom = int(size * 0.12)
+    pad_right = int(size * 0.21)
+    pad_bottom = int(size * 0.11)
     x = size - tw - pad_right - bbox[0]
     y = size - th - pad_bottom - bbox[1]
 
