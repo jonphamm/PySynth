@@ -2,6 +2,11 @@
 .env
 .vapid_keys.local
 
+# Icon source artwork — keep local; only the generated icons in
+# frontend/public/ should be committed.
+scripts/reference.icon.png
+scripts/reference-icon.png
+
 # Python
 __pycache__/
 *.pyc

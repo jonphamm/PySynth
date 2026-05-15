@@ -1,12 +1,16 @@
 """One-shot generator for PySynth's PWA icons.
 
-Produces four PNGs in `frontend/public/`:
+Loads `scripts/reference.icon.png` (the user-supplied Python-logo + code-editor
+artwork), center-crops it to square, downsamples to each target size with
+LANCZOS so the result is sharp, and overlays a subtle `by: JP` watermark in
+the bottom-right corner.
+
+Outputs in `frontend/public/`:
 - icon-192.png             — Android home-screen
 - icon-512.png             — Android splash / larger surfaces
 - icon-512-maskable.png    — Android adaptive (safe zone padded)
 - apple-touch-icon.png     — iOS home-screen (180×180), required for PWA install
 
-Visual: dark background, cyan rounded square plate, "PS" wordmark.
 Run manually: `python scripts/generate_pwa_icons.py`
 """
 
@@ -17,14 +21,19 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 
-BG = (2, 2, 3, 255)         # near-black, matches manifest background_color
-CYAN = (0, 245, 255, 255)   # matches manifest theme_color
-TEXT = (8, 12, 18, 255)     # very dark slate so "PS" reads on cyan
-OUT_DIR = Path(__file__).resolve().parents[1] / "frontend" / "public"
+SCRIPTS_DIR = Path(__file__).resolve().parent
+SOURCE = SCRIPTS_DIR / "reference.icon.png"
+OUT_DIR = SCRIPTS_DIR.parent / "frontend" / "public"
+
+WATERMARK_RGBA = (255, 255, 255, 200)
+WATERMARK_SHADOW = (0, 0, 0, 220)
+# Sampled near the corners of the reference so the maskable-variant padding
+# blends with the artwork instead of showing a hard seam.
+BG_DARK = (10, 24, 32, 255)
 
 
-def _pick_font(size: int) -> ImageFont.ImageFont:
-    for name in ("arialbd.ttf", "arial.ttf", "DejaVuSans-Bold.ttf", "DejaVuSans.ttf"):
+def _pick_sans_bold(size: int) -> ImageFont.ImageFont:
+    for name in ("seguibl.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"):
         try:
             return ImageFont.truetype(name, size=size)
         except OSError:
@@ -32,45 +41,84 @@ def _pick_font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _draw_icon(size: int, *, padding_ratio: float = 0.0) -> Image.Image:
-    """Square icon with a cyan plate + "PS" text.
+def _square_crop(src: Image.Image) -> Image.Image:
+    """Center-crop to a square using the smaller of width/height."""
+    w, h = src.size
+    side = min(w, h)
+    left = (w - side) // 2
+    top = (h - side) // 2
+    return src.crop((left, top, left + side, top + side))
 
-    padding_ratio=0.12 reserves the maskable safe zone (Android crops up to ~10%
-    on adaptive icons; 12% is conservative)."""
-    img = Image.new("RGBA", (size, size), BG)
-    draw = ImageDraw.Draw(img)
 
-    pad = int(size * padding_ratio)
-    plate_inset = pad + int(size * 0.10)
-    radius = int(size * 0.18)
-    draw.rounded_rectangle(
-        (plate_inset, plate_inset, size - plate_inset, size - plate_inset),
-        radius=radius,
-        fill=CYAN,
-    )
+def _add_watermark(img: Image.Image) -> None:
+    """'by: JP' tag, bottom-right corner — small, semi-transparent, with a
+    drop shadow so it stays readable at home-screen render sizes without
+    covering the Python-logo subject. Mutates `img`."""
+    size = img.size[0]
+    draw = ImageDraw.Draw(img, "RGBA")
+    font = _pick_sans_bold(max(12, int(size * 0.065)))
+    text = "by: JP"
 
-    text = "PS"
-    font = _pick_font(int(size * 0.42))
     bbox = draw.textbbox((0, 0), text, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    tx = (size - tw) // 2 - bbox[0]
-    ty = (size - th) // 2 - bbox[1] - int(size * 0.02)
-    draw.text((tx, ty), text, font=font, fill=TEXT)
-    return img
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+
+    # Inset from edge — leaves enough room that iOS's ~22%-radius corner
+    # mask doesn't clip the text.
+    pad = int(size * 0.07)
+    x = size - tw - pad - bbox[0]
+    y = size - th - pad - bbox[1]
+
+    # Shadow + text — no pill backing this time, just the text floating
+    # so the artwork shows through underneath.
+    shadow_offset = max(1, size // 220)
+    draw.text((x + shadow_offset, y + shadow_offset),
+              text, font=font, fill=WATERMARK_SHADOW)
+    draw.text((x, y), text, font=font, fill=WATERMARK_RGBA)
+
+
+def _padded_for_maskable(square: Image.Image, target_size: int, pad_ratio: float) -> Image.Image:
+    """Wrap the square artwork in a same-colored background so Android's
+    adaptive-icon crop (circle, squircle, etc.) doesn't eat the logo."""
+    canvas = Image.new("RGBA", (target_size, target_size), BG_DARK)
+    inner_size = target_size - 2 * int(target_size * pad_ratio)
+    inner = square.resize((inner_size, inner_size), Image.LANCZOS).convert("RGBA")
+    pad = (target_size - inner_size) // 2
+    canvas.paste(inner, (pad, pad), inner)
+    return canvas
 
 
 def main() -> None:
+    if not SOURCE.exists():
+        raise SystemExit(
+            f"Missing source artwork at {SOURCE}. Save the reference image there first."
+        )
+    src = Image.open(SOURCE).convert("RGBA")
+    square = _square_crop(src)
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    targets = [
-        ("icon-192.png", 192, 0.0),
-        ("icon-512.png", 512, 0.0),
-        ("icon-512-maskable.png", 512, 0.12),
-        ("apple-touch-icon.png", 180, 0.0),
+
+    # Non-maskable variants: resize the cropped square directly, watermark
+    # in the bottom-right.
+    plain_targets = [
+        ("icon-192.png", 192),
+        ("icon-512.png", 512),
+        ("apple-touch-icon.png", 180),
     ]
-    for name, size, pad in targets:
+    for name, size in plain_targets:
+        out = square.resize((size, size), Image.LANCZOS).convert("RGBA")
+        _add_watermark(out)
         path = OUT_DIR / name
-        _draw_icon(size, padding_ratio=pad).save(path, "PNG")
+        out.save(path, "PNG")
         print(f"wrote {path}")
+
+    # Maskable variant: add 14% safe-zone padding so Android can crop with
+    # any shape without losing the snakes or the watermark.
+    maskable = _padded_for_maskable(square, 512, pad_ratio=0.14)
+    _add_watermark(maskable)
+    path = OUT_DIR / "icon-512-maskable.png"
+    maskable.save(path, "PNG")
+    print(f"wrote {path}")
 
 
 if __name__ == "__main__":
