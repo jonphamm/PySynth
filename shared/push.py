@@ -50,41 +50,29 @@ class Subscription:
         }
 
 
-def _decode_raw_b64url(s: str) -> bytes:
-    s = s.strip()
-    padded = s + "=" * (-len(s) % 4)
-    return base64.urlsafe_b64decode(padded)
-
-
 def _normalize_private_key(raw: str) -> str:
-    """Return a clean PEM block regardless of which input format was used.
+    """Return the raw 32-byte EC private key as a single base64url line.
 
-    - If the value looks like PEM (`BEGIN`/`END` markers), assume that's what
-      it is and pass through after stripping per-line leading whitespace
-      that some cloud env-var UIs introduce when the source file was
-      indented.
-    - Otherwise, treat the value as a base64url-encoded raw 32-byte EC
-      private key and reconstruct a PEM block in-memory."""
-    if "BEGIN" in raw and "END" in raw:
-        # Strip leading whitespace per line (the most common Render-paste mistake)
-        cleaned = "\n".join(line.strip() for line in raw.splitlines())
-        return cleaned
+    `py_vapid.Vapid.from_string()` (which pywebpush calls internally) does NOT
+    parse PEM. It strips newlines from the input, base64url-decodes the whole
+    string, and only succeeds if the decoded length is exactly 32 bytes
+    (raw EC scalar). If we hand it PEM, it tries to decode the BEGIN/END
+    markers as base64url and the result is gibberish.
 
-    # Raw base64url format
-    key_bytes = _decode_raw_b64url(raw)
-    if len(key_bytes) != 32:
-        raise PushConfigError(
-            f"VAPID_PRIVATE_KEY decoded to {len(key_bytes)} bytes, expected 32 "
-            f"(if you meant PEM format, include the BEGIN/END markers)"
-        )
-    private_int = int.from_bytes(key_bytes, "big")
-    key_obj = ec.derive_private_key(private_int, ec.SECP256R1())
-    pem = key_obj.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-    return pem.decode("ascii")
+    So this function always returns the raw form:
+    - Raw input (no PEM markers) → strip whitespace, pass through
+    - PEM input → parse to extract the 32-byte scalar, re-encode as
+      base64url. Lets users migrate from older PEM-style env vars without
+      having to regenerate keys."""
+    raw = raw.strip()
+    if "BEGIN" not in raw and "END" not in raw:
+        return raw
+
+    key_obj = serialization.load_pem_private_key(raw.encode("ascii"), password=None)
+    if not isinstance(key_obj, ec.EllipticCurvePrivateKey):
+        raise PushConfigError("VAPID_PRIVATE_KEY must be an EC P-256 key")
+    raw_bytes = key_obj.private_numbers().private_value.to_bytes(32, "big")
+    return base64.urlsafe_b64encode(raw_bytes).rstrip(b"=").decode("ascii")
 
 
 def _vapid_config() -> tuple[str, dict]:
