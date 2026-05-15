@@ -145,8 +145,4 @@ export function unsubscribePush(endpoint: string): Promise<{ ok: boolean }> {
   return post<{ ok: boolean }>("/push/unsubscribe", { endpoint });
 }
 
-export function sendTestPush(): Promise<{ sent: number; expired_removed: number }> {
-  return post<{ sent: number; expired_removed: number }>("/push/test", {});
-}
-
 export { ApiError };

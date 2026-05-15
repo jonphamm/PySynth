@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { sendTestPush } from "@/lib/api";
 import {
   disablePush,
   enablePush,
@@ -84,21 +83,6 @@ export function NotificationsToggle() {
     }
   }, [refresh]);
 
-  const onTest = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await sendTestPush();
-      if (result.sent === 0) {
-        setError("Backend returned 0 sent — subscription may be expired. Try disabling and re-enabling.");
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Test push failed.");
-    } finally {
-      setBusy(false);
-    }
-  }, []);
-
   if (state.kind === "loading" || state.kind === "unsupported") {
     // Render nothing while loading (avoids hydration flash) or if push is just
     // not available in this browser.
@@ -152,19 +136,6 @@ export function NotificationsToggle() {
           <p className="mt-2 text-[11px] leading-relaxed" style={{ color: "#9aa0a6" }}>
             You&apos;ll be pinged daily if you haven&apos;t studied yet.
           </p>
-          <button
-            type="button"
-            onClick={onTest}
-            disabled={busy}
-            className="mt-2 w-full rounded-md px-3 py-2 font-mono text-[11px] uppercase tracking-widest transition-colors hover:bg-[rgba(0,245,255,0.12)] disabled:opacity-50"
-            style={{
-              border: "1px solid rgba(0,245,255,0.35)",
-              color: "rgba(0,245,255,0.85)",
-              background: "rgba(0,245,255,0.05)",
-            }}
-          >
-            {busy ? "Sending…" : "Send test push"}
-          </button>
           <button
             type="button"
             onClick={onDisable}

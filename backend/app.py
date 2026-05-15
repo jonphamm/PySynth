@@ -543,18 +543,3 @@ async def push_send_daily(
     )
 
 
-@app.post("/push/test")
-async def push_test(
-    user_id: UUID = Depends(get_user_id),
-    db: AsyncSession = Depends(get_session),
-) -> dict[str, int]:
-    """Send an immediate push to every subscription for the calling user,
-    bypassing the "have you studied today" check. Wired to the "Send test
-    push" button in the UI so you can verify push delivery without waiting
-    for tomorrow's cron."""
-    stmt = select(PushSubscription).where(PushSubscription.user_id == user_id)
-    subs = list((await db.execute(stmt)).scalars().all())
-    print(f"[push_test] caller={user_id} subs_found={len(subs)}", flush=True)
-    return await _send_to_subs(
-        subs, db, "PySynth test", "If you see this, web push is working."
-    )
