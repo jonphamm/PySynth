@@ -63,9 +63,11 @@ def _add_watermark(img: Image.Image) -> None:
     tw = bbox[2] - bbox[0]
     th = bbox[3] - bbox[1]
 
-    # Inset from edge — leaves enough room that iOS's ~22%-radius corner
-    # mask doesn't clip the text.
-    pad = int(size * 0.07)
+    # Inset from edge — iOS rounds its app-icon mask at ~22% radius, so
+    # text at 7% inset was getting clipped at the bottom-right corner.
+    # 11% keeps the whole "by: JP" inside the safe zone at every render
+    # size, including the 60px home-screen render on iPhone.
+    pad = int(size * 0.11)
     x = size - tw - pad - bbox[0]
     y = size - th - pad - bbox[1]
 
