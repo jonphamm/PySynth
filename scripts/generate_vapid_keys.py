@@ -41,12 +41,6 @@ def main() -> None:
     private = ec.generate_private_key(ec.SECP256R1())
     public = private.public_key()
 
-    private_pem = private.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode("ascii")
-
     # Web Push expects the public key as the raw uncompressed point (65 bytes,
     # leading 0x04) encoded base64url. SubjectPublicKeyInfo (DER) is *not* the
     # right format here.
@@ -56,6 +50,13 @@ def main() -> None:
     )
     public_b64 = _b64url(public_raw)
 
+    # Raw 32-byte EC private key, base64url-encoded — single line, no PEM
+    # wrapping. Safer to paste into cloud env-var UIs than the multi-line
+    # PEM block (some Render/Vercel textareas mangle whitespace/newlines
+    # and corrupt PEM, but a single base64url line is immune).
+    raw_priv_bytes = private.private_numbers().private_value.to_bytes(32, "big")
+    private_b64 = _b64url(raw_priv_bytes)
+
     body = (
         "# PySynth VAPID keypair — DO NOT COMMIT.\n"
         "# Paste these into Render + Vercel env vars, then optionally delete this file.\n\n"
@@ -63,10 +64,9 @@ def main() -> None:
         f"VAPID_PUBLIC_KEY={public_b64}\n\n"
         f"# Frontend exposes the public key (safe to ship in bundle):\n"
         f"NEXT_PUBLIC_VAPID_PUBLIC_KEY={public_b64}\n\n"
-        "# Backend-only; treat like a password:\n"
-        "VAPID_PRIVATE_KEY=|\n"
-        + "\n".join("  " + line for line in private_pem.splitlines())
-        + "\n"
+        "# Backend-only; treat like a password. Single-line base64url —\n"
+        "# safe to paste into Render's env-var UI without whitespace corruption.\n"
+        f"VAPID_PRIVATE_KEY={private_b64}\n"
     )
     OUT_FILE.write_text(body, encoding="utf-8")
 
@@ -76,7 +76,7 @@ def main() -> None:
     print(f"  VAPID_SUBJECT={SUBJECT_DEFAULT}")
     print(f"  VAPID_PUBLIC_KEY={public_b64}")
     print(f"  NEXT_PUBLIC_VAPID_PUBLIC_KEY={public_b64}")
-    print(f"  VAPID_PRIVATE_KEY=<see {OUT_FILE} — full PEM block>")
+    print(f"  VAPID_PRIVATE_KEY={private_b64}")
 
 
 if __name__ == "__main__":
