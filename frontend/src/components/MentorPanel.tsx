@@ -127,7 +127,7 @@ export function MentorPanel({
         />
       )}
       <aside
-        className={`glass relative flex h-full min-h-0 w-[340px] flex-col overflow-hidden p-5 transition-transform duration-300 ease-out max-lg:fixed max-lg:inset-y-2 max-lg:right-2 max-lg:z-50 max-lg:h-[calc(100%-1rem)] max-md:w-[calc(100%-1rem)] md:max-lg:w-[420px] ${
+        className={`glass relative flex h-full min-h-0 w-[340px] flex-col overflow-hidden p-5 transition-transform duration-300 ease-out max-lg:fixed max-lg:right-2 max-lg:z-50 max-lg:top-[max(0.5rem,env(safe-area-inset-top))] max-lg:bottom-[max(0.5rem,env(safe-area-inset-bottom))] max-md:w-[calc(100%-1rem)] md:max-lg:w-[420px] ${
           mobileOpen ? "max-lg:translate-x-0" : "max-lg:translate-x-[120%]"
         } lg:translate-x-0`}
       >

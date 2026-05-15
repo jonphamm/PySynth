@@ -66,6 +66,25 @@ html, body {
   overflow: hidden;
 }
 
+/* App shell — keeps content out from under the iOS Dynamic Island /
+   notch / home-indicator. `max()` keeps our existing padding on
+   browsers where the inset is 0 (desktop, non-notched). */
+.app-shell {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-right: max(0.5rem, env(safe-area-inset-right));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  padding-left: max(0.5rem, env(safe-area-inset-left));
+}
+@media (min-width: 640px) {
+  .app-shell {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+}
+
+
 body {
   position: relative;
 }
