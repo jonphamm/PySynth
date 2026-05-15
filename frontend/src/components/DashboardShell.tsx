@@ -79,7 +79,7 @@ export function DashboardShell() {
     <>
       <MouseFollowerGlow />
 
-      <div className="app-shell relative z-10 mx-auto flex h-screen max-w-[1500px] flex-col gap-3">
+      <div className="app-shell relative z-10 mx-auto flex h-dvh max-w-[1500px] flex-col gap-3">
         {/* Header row: header bar with progress orbit */}
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">

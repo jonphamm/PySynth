@@ -63,6 +63,7 @@ html, body {
   color: rgb(245 245 245);
   font-family: var(--font-sans), -apple-system, "Segoe UI", system-ui, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
 }
 
