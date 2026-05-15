@@ -479,19 +479,29 @@ async def _send_to_subs(
     subscriptions and deletes them in one batch at the end."""
     sent = 0
     expired_ids: list[UUID] = []
+    other_failures: list[str] = []
     for s in subs:
         sub = Subscription(endpoint=s.endpoint, p256dh=s.p256dh, auth=s.auth)
         try:
             await asyncio.to_thread(send_push, sub, title, body, "/")
             sent += 1
-        except PushExpired:
+        except PushExpired as exc:
             expired_ids.append(s.id)
+            print(f"[push] expired sub {s.id}: {exc}", flush=True)
         except PushConfigError:
             # Misconfiguration — fail the whole run so the cron logs it loudly
             raise
-        except Exception:
-            # Don't let one flaky endpoint stop the others
-            pass
+        except Exception as exc:
+            # Log instead of silent-fail so we can see real failures (VAPID
+            # signature issues, network errors, etc.)
+            other_failures.append(f"{type(exc).__name__}: {exc}")
+            print(f"[push] send failed sub {s.id}: {type(exc).__name__}: {exc}", flush=True)
+
+    print(
+        f"[push] result: subs={len(subs)} sent={sent} "
+        f"expired={len(expired_ids)} other_failures={len(other_failures)}",
+        flush=True,
+    )
 
     if expired_ids:
         await db.execute(
@@ -544,6 +554,7 @@ async def push_test(
     for tomorrow's cron."""
     stmt = select(PushSubscription).where(PushSubscription.user_id == user_id)
     subs = list((await db.execute(stmt)).scalars().all())
+    print(f"[push_test] caller={user_id} subs_found={len(subs)}", flush=True)
     return await _send_to_subs(
         subs, db, "PySynth test", "If you see this, web push is working."
     )
