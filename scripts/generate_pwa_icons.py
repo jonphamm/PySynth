@@ -56,20 +56,25 @@ def _add_watermark(img: Image.Image) -> None:
     covering the Python-logo subject. Mutates `img`."""
     size = img.size[0]
     draw = ImageDraw.Draw(img, "RGBA")
-    font = _pick_sans_bold(max(12, int(size * 0.065)))
+    font = _pick_sans_bold(max(7, int(size * 0.032)))
     text = "by: JP"
 
     bbox = draw.textbbox((0, 0), text, font=font)
     tw = bbox[2] - bbox[0]
     th = bbox[3] - bbox[1]
 
-    # Inset from edge — iOS rounds its app-icon mask at ~22% radius, so
-    # text at 7% inset was getting clipped at the bottom-right corner.
-    # 11% keeps the whole "by: JP" inside the safe zone at every render
-    # size, including the 60px home-screen render on iPhone.
-    pad = int(size * 0.11)
-    x = size - tw - pad - bbox[0]
-    y = size - th - pad - bbox[1]
+    # Sit in the dark wedge between the yellow snake's bottom-right curve
+    # and the icon's edge. The wedge is narrow — the snake's bottom edge
+    # comes close to the icon bottom — so the watermark has to be quite
+    # small AND positioned with care: bigger horizontal inset moves it
+    # toward icon-center (where the wedge is thinnest), bigger vertical
+    # inset moves it up (toward the snake). These two values are tuned
+    # so the text lands fully inside the wedge without touching either
+    # the snake or the iOS-mask clip zone.
+    pad_right = int(size * 0.25)
+    pad_bottom = int(size * 0.12)
+    x = size - tw - pad_right - bbox[0]
+    y = size - th - pad_bottom - bbox[1]
 
     # Shadow + text — no pill backing this time, just the text floating
     # so the artwork shows through underneath.
