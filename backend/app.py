@@ -18,7 +18,7 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -469,39 +469,20 @@ async def push_unsubscribe(
     return {"ok": True}
 
 
-@app.post("/push/send-daily")
-async def push_send_daily(
-    db: AsyncSession = Depends(get_session),
-    _: None = Depends(require_cron_secret),
+async def _send_to_subs(
+    subs: list[PushSubscription],
+    db: AsyncSession,
+    title: str,
+    body: str,
 ) -> dict[str, int]:
-    """Cron entrypoint — push to every subscribed user who has NOT logged a
-    session today. Date check uses server-local (UTC) `date.today()`; late
-    ET-evening sessions can land on the next UTC date, which would cause a
-    spurious reminder the morning after. Acceptable for v1; see plan."""
-    today = date.today()
-    not_done_today = (
-        select(SessionRow.id)
-        .where(
-            SessionRow.user_id == PushSubscription.user_id,
-            SessionRow.date == today,
-        )
-        .exists()
-    )
-    stmt = select(PushSubscription).where(~not_done_today)
-    subs = (await db.execute(stmt)).scalars().all()
-
+    """Push `title`/`body` to each subscription. Collects expired (410)
+    subscriptions and deletes them in one batch at the end."""
     sent = 0
     expired_ids: list[UUID] = []
     for s in subs:
         sub = Subscription(endpoint=s.endpoint, p256dh=s.p256dh, auth=s.auth)
         try:
-            await asyncio.to_thread(
-                send_push,
-                sub,
-                "PySynth",
-                "Time for today's Python session.",
-                "/",
-            )
+            await asyncio.to_thread(send_push, sub, title, body, "/")
             sent += 1
         except PushExpired:
             expired_ids.append(s.id)
@@ -519,3 +500,50 @@ async def push_send_daily(
         await db.commit()
 
     return {"sent": sent, "expired_removed": len(expired_ids)}
+
+
+@app.post("/push/send-daily")
+async def push_send_daily(
+    db: AsyncSession = Depends(get_session),
+    _: None = Depends(require_cron_secret),
+) -> dict[str, int]:
+    """Cron entrypoint — push to every subscribed user who has NOT logged a
+    session today. Date check uses server-local (UTC) `date.today()`; late
+    ET-evening sessions can land on the next UTC date, which would cause a
+    spurious reminder the morning after. Acceptable for v1; see plan.
+
+    Uses a LEFT JOIN + IS NULL rather than NOT EXISTS — the latter version
+    silently returned no rows under SQLAlchemy 2.0 because the correlated
+    subquery wasn't matching the outer push_subscriptions row in practice."""
+    today = date.today()
+    stmt = (
+        select(PushSubscription)
+        .outerjoin(
+            SessionRow,
+            and_(
+                SessionRow.user_id == PushSubscription.user_id,
+                SessionRow.date == today,
+            ),
+        )
+        .where(SessionRow.id.is_(None))
+    )
+    subs = list((await db.execute(stmt)).scalars().all())
+    return await _send_to_subs(
+        subs, db, "PySynth", "Time for today's Python session."
+    )
+
+
+@app.post("/push/test")
+async def push_test(
+    user_id: UUID = Depends(get_user_id),
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, int]:
+    """Send an immediate push to every subscription for the calling user,
+    bypassing the "have you studied today" check. Wired to the "Send test
+    push" button in the UI so you can verify push delivery without waiting
+    for tomorrow's cron."""
+    stmt = select(PushSubscription).where(PushSubscription.user_id == user_id)
+    subs = list((await db.execute(stmt)).scalars().all())
+    return await _send_to_subs(
+        subs, db, "PySynth test", "If you see this, web push is working."
+    )
