@@ -15,6 +15,7 @@ invalidate every active subscription.
 from __future__ import annotations
 
 import base64
+import os
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
@@ -23,7 +24,10 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT_FILE = REPO_ROOT / ".vapid_keys.local"
-SUBJECT_DEFAULT = "mailto:jonpham09@gmail.com"
+# VAPID requires a contact (email or URL) the push service can reach if there
+# are problems. Override via env var, e.g.:
+#   VAPID_SUBJECT=mailto:you@example.com python scripts/generate_vapid_keys.py
+SUBJECT_DEFAULT = os.environ.get("VAPID_SUBJECT", "mailto:admin@example.com")
 
 
 def _b64url(data: bytes) -> str:
