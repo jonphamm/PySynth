@@ -20,15 +20,26 @@ def start_user_message(
     same_day_chapter: str | None = None,
     same_day_concept: str | None = None,
     pin_chapter: str | None = None,
+    auto_pin_chapter: str | None = None,
 ) -> str:
     """Prompt that asks for today's concept review + 4 quiz questions as JSON.
 
-    Three optional override modes:
+    Four optional override modes:
     - `pin_chapter`: explicit chapter pin — user clicked a past chapter in
       the sidebar. Generates a session on that exact chapter. Takes
-      precedence over `same_day_intent` (callers should not set both).
+      precedence over `same_day_intent` and `auto_pin_chapter` (callers
+      should not set both).
     - `same_day_intent` + chapter/concept: same-day review or advance,
       triggered by the SameDayModal when today's session is already logged.
+      Takes precedence over `auto_pin_chapter`.
+    - `auto_pin_chapter`: server-side deterministic next-chapter pin for
+      the default daily-advance flow. Computed by `compute_next_chapter()`
+      in shared.progress from the user's done-chapters list against the
+      learning plan. Applies only in the default branch (no pin, no
+      same-day intent). When provided, the LLM is locked to that exact
+      chapter label and may only pick the granular concept. When None,
+      the default branch falls back to the LLM picking from the plan
+      (intentional fallback for users past Part 1).
 
     With no overrides, the prompt asks the LLM to follow the recipe's normal
     next-uncovered-chapter logic.
@@ -72,6 +83,26 @@ def start_user_message(
                 "proceed with generating the next chapter's session.\n\n"
                 "---\n\n"
             )
+    elif auto_pin_chapter:
+        override = (
+            "OVERRIDE — server-computed next chapter (daily advance):\n"
+            "The user is starting today's session with no explicit review choice.\n"
+            "The next chapter has been determined server-side from the user's\n"
+            "done-chapters list and the learning plan. Set `topic.chapter` to EXACTLY:\n"
+            f'    "{auto_pin_chapter}"\n'
+            "Use that string verbatim — same Part number, same Chapter number, same\n"
+            "title, same punctuation. You MAY pick the granular `concept` within this\n"
+            "chapter as usual, but you MUST NOT change the chapter, MUST NOT drift to\n"
+            "a different chapter number, and MUST NOT improvise a different title.\n"
+            "Do NOT repeat the most recent chapter, even if its quiz score was low or\n"
+            "its exercise verdict was 'needs fix' or 'close'. A single weak session\n"
+            "does not trigger an auto-review day. The recipe's \"interleave a review\n"
+            "day for weakness every 3-4 sessions\" rule is paused here -- review days\n"
+            "are user-initiated only:\n"
+            "  - same-day re-runs come through the SameDayModal (different override),\n"
+            "  - past-chapter revisits come through the past-chapters sidebar pin.\n\n"
+            "---\n\n"
+        )
     else:
         override = (
             "DEFAULT MODE — daily advance:\n"

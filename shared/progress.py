@@ -67,6 +67,54 @@ async def pick_next_angle(user_id: UUID, db: AsyncSession) -> str:
     return used[-1] if used else "A"  # oldest of the last 3 = least recently used
 
 
+def _parse_part1_chapters(plan_text: str) -> list[tuple[int, str]]:
+    """Extract Part 1's numbered chapter list from the learning plan.
+
+    Returns [(chapter_number, chapter_title), ...] in order. Empty list if the
+    Part 1 block isn't found or the list is malformed."""
+    m = re.search(
+        r"\*\*Part 1[^\n]*\*\*.*?\n((?:\s*\d+\.[^\n]+\n?)+)",
+        plan_text,
+        re.DOTALL,
+    )
+    if not m:
+        return []
+    chapters: list[tuple[int, str]] = []
+    for raw in m.group(1).splitlines():
+        line = raw.strip()
+        # "3. More about Variables (variables, naming, basic data types)"
+        cm = re.match(r"(\d+)\.\s+([^()]+?)(?:\s*\(|$)", line)
+        if cm:
+            chapters.append((int(cm.group(1)), cm.group(2).strip()))
+    return chapters
+
+
+def compute_next_chapter(done: list[dict], plan_text: str) -> str | None:
+    """Server-side deterministic 'what chapter is next' for Part 1.
+
+    Looks at all Part 1 chapters the user has marked done, picks the highest
+    completed number, and returns the next chapter as the canonical label
+    "Part 1 / Chapter N — Title". Returns None once Part 1 is finished — the
+    caller falls back to LLM-driven selection for Parts 2+, which still need
+    their own deterministic source eventually."""
+    part1 = _parse_part1_chapters(plan_text)
+    if not part1:
+        return None
+    max_done = 0
+    for entry in done:
+        chapter = entry.get("chapter") or ""
+        m = re.search(r"Part\s+1\s*/\s*Ch(?:apter)?\s+(\d+)", chapter, re.IGNORECASE)
+        if m:
+            n = int(m.group(1))
+            if n > max_done:
+                max_done = n
+    next_num = max_done + 1
+    for num, title in part1:
+        if num == next_num:
+            return f"Part 1 / Chapter {num} — {title}"
+    return None
+
+
 async def list_done_chapters(user_id: UUID, db: AsyncSession) -> list[dict]:
     """Return distinct chapters the user has done a Daily / Daily (extra) on,
     sorted by (part, chapter). Each entry: {chapter, last_date}."""

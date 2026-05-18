@@ -25,7 +25,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.db import PushSubscription, Session as SessionRow, User, get_session
 from shared.push import PushConfigError, PushExpired, Subscription, send_push
 from shared.llm import call_llm, call_llm_json
+from shared.config import PLAN_PATH, load_text
 from shared.progress import (
+    compute_next_chapter,
     find_today_daily_row,
     list_done_chapters,
     log_session,
@@ -249,7 +251,9 @@ async def session_start(
                 same_day_concept=today_row["concept"],
             )
         else:
-            user_msg = start_user_message()
+            done = await list_done_chapters(user_id, db)
+            auto_pin = compute_next_chapter(done, load_text(PLAN_PATH))
+            user_msg = start_user_message(auto_pin_chapter=auto_pin)
 
     cache_key = (str(user_id), date.today().isoformat(), req.intent, req.pin_to_chapter)
     cached = _session_cache.get(cache_key)
