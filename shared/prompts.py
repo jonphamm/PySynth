@@ -206,9 +206,27 @@ def grade_user_message(
     )
 
 
-def exercise_user_message(angle: str) -> str:
-    """Prompt that produces the coding exercise + apply-at-work paragraph (JSON mode)."""
-    return (
+def exercise_user_message(angle: str, *, chapter: str = "", concept: str = "") -> str:
+    """Prompt that produces the coding exercise + apply-at-work paragraph (JSON mode).
+
+    When `chapter` and `concept` are both provided, prepends a strong pin override
+    so the exercise stays locked to the current session's topic instead of drifting
+    to whichever chapter the LLM would infer from progress.md.
+    """
+    override = ""
+    if chapter and concept:
+        override = (
+            "OVERRIDE — exercise chapter pin (active session):\n"
+            f'The user is currently working through chapter "{chapter}" / concept "{concept}"\n'
+            "in their active session. This coding exercise MUST be for THAT chapter and\n"
+            "THAT concept. Set `exercise.topic` to exactly:\n"
+            f'    "{chapter} / {concept}"\n'
+            "Do NOT drift to a different chapter or concept regardless of what\n"
+            "progress.md, recent rows, or any \"next chapter\" inference would suggest.\n"
+            "The task must exercise the pinned concept, not an adjacent one.\n\n"
+            "---\n\n"
+        )
+    return override + (
         "Generate the coding exercise and apply-at-work as a JSON object with EXACTLY this shape "
         "(no markdown, no extra commentary — just the JSON):\n\n"
         "{\n"

@@ -301,7 +301,8 @@ async def session_exercise(
     db: AsyncSession = Depends(get_session),
 ) -> ExerciseResponse:
     angle = await pick_next_angle(user_id, db)
-    user_msg = exercise_user_message(angle)
+    pin_chapter = (req.topic or {}).get("chapter", "") if isinstance(req.topic, dict) else ""
+    user_msg = exercise_user_message(angle, chapter=pin_chapter, concept=req.concept)
     try:
         sys_prompt = await build_system_prompt(user_id, db)
         data, _provider = call_llm_json(sys_prompt, user_msg)
